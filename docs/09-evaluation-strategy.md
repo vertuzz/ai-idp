@@ -15,7 +15,7 @@ The initial **target** is **120 documents**, covering a planning estimate of rou
 
 The exact source selection, licensing/redistribution checks, annotation conventions, 72/24/24 split, dataset preparation, verification counterfactuals and execution procedure are fully specified in **[12 — Evaluation Corpus](12-evaluation-corpus.md)**. The machine-readable target plan is [eval/corpus-plan.yaml](../eval/corpus-plan.yaml).
 
-**Status is PLANNED, not DOWNLOADED/ANNOTATED.** The dataset must be prepared before substantial pipeline development. Begin with 20–30 approved preview cases and expand to the complete frozen 120-document suite. This avoids false claims about unverified file IDs or already-existing gold labels.
+**Status: all 120 candidate files are acquired; annotation/review is incomplete.** Fifty cases have draft answer keys and 70 await extraction annotation. A 24-case development preview is selected, but no case is yet marked evaluation-ready. See the [live corpus catalog](../eval/CORPUS.md). Complete rights, group and human annotation review before final freeze and model comparisons.
 
 ## Central research question
 

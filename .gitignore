@@ -26,6 +26,7 @@ artifacts/
 telemetry/
 eval-results/
 *.jsonl
+!eval/manifest.jsonl
 *.sqlite3
 
 # Editors / OS

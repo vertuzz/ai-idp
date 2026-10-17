@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-NATIVE-03",
+  "title": "Operating expense review",
+  "period": "2026-Q3",
+  "currency": "USD",
+  "net_total": 1474,
+  "approved_total": 1549,
+  "issue_date": "2026-09-13",
+  "split": "development",
+  "kind": "native",
+  "index": 2,
+  "inspection_status": "PASS"
+}

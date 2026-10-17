@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-MIXED-01",
+  "title": "Operating expense review",
+  "period": "2026-Q3",
+  "currency": "EUR",
+  "net_total": 1263,
+  "approved_total": 1338,
+  "issue_date": "2026-09-11",
+  "split": "development",
+  "kind": "mixed",
+  "index": 0,
+  "inspection_status": "PASS"
+}

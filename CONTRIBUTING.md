@@ -16,7 +16,21 @@ AI-IDP is a public, Apache-2.0-licensed general-purpose IDP experiment. Contribu
 
 ## Local development
 
-Implementation scaffolding is planned but not yet committed. Once available, the project will use Python, uv, Docker Compose, and a local PostgreSQL instance. Never commit a populated .env file; use the example environment file instead.
+Use Python 3.13 through uv: `uv sync --locked`, then `uv run python -m pytest -q`
+and `uv run ruff check .`. Run `uv run ruff format --check .` before submitting changes.
+Use `uv run --group evaluation python -m scripts.prepare_corpus` to restore the 120-file
+candidate corpus. Run `uv run --group evaluation python -m scripts.validate_corpus`
+and `uv run --group evaluation python -m pytest -q` for corpus checks (see `eval/README.md`).
+
+Development currently runs on Windows, but all project code and development entry points
+must remain portable across Windows, Linux and macOS. Use `pathlib`, avoid shell-specific
+setup/activation, and declare any unavoidable platform dependency explicitly. The current
+bootstrap has been exercised on Windows only; other platforms still require verification.
+`.gitattributes` keeps source text at LF and preserves binary fixture bytes/checksums across
+platforms. Do not apply text line-ending normalization to document or image fixtures.
+
+Docker Compose, the API, and local PostgreSQL setup belong to the upcoming foundation
+milestone. Never commit a populated .env file; use the example environment file instead.
 
 ## Security vulnerabilities
 

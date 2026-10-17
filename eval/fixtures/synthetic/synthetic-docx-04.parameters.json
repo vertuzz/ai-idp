@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-DOCX-04",
+  "title": "Laboratory cost record",
+  "period": "2026-Q3",
+  "currency": "EUR",
+  "net_total": 1653,
+  "approved_total": 1728,
+  "issue_date": "2026-09-14",
+  "split": "calibration",
+  "kind": "docx",
+  "index": 3,
+  "inspection_status": "PASS"
+}

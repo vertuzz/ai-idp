@@ -1,6 +1,6 @@
 # 12 — Evaluation Corpus: 120-Document Pilot
 
-**Status:** approved **target design**, not an assertion that documents have already been downloaded or annotated. This document is the authoritative plan for selecting, labeling, storing and using the first 120 real-world/realistic evaluation documents.
+**Status:** approved target design; all 120 candidate files are now acquired. Fifty cases have draft answer keys; 70 still require field annotation. Human review, final rights/group adjudication and benchmark freeze remain pending. See the [actual corpus catalog](../eval/CORPUS.md). This document remains the authoritative preparation policy.
 
 The initial evaluation corpus must be prepared **before substantial application implementation**. It will drive development with real examples rather than post-hoc benchmarking. The project remains public, Apache-2.0-licensed, general-purpose and potentially suitable for future commercial services. Source datasets retain their **own** licences.
 
@@ -175,7 +175,9 @@ Report source-specific metrics; do not let easily scored CORD receipts hide a ro
 8. Run holdout comparison infrequently, with a frozen experiment configuration and archived metrics.
 9. Add new datasets later through a separate, versioned corpus release; do not silently replace pilot samples.
 
-**Current project status:** only this specification and a machine-readable **target plan** are committed. No claim is made that the 120 documents, labels, or real benchmark results already exist.
+**Current project status:** all 120 candidate source identities and files exist, with SHA-256,
+provenance and proposed 72/24/24 splits. Fifty draft annotations and 70 annotation work items
+are available locally. No reviewed ground-truth suite or real benchmark results are claimed.
 
 ## 8. Public repository and legal policy
 

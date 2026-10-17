@@ -1,0 +1,1035 @@
+[
+  {
+    "case_id": "gov-uk-docx-bribery-and-corruption-assessment-template-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Bribery and corruption assessment template",
+    "publication_url": "https://www.gov.uk/government/publications/bribery-and-corruption-assessment-template",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a7f7e8040f0b62305b877c7/Bribery_and_corruption_assessment_template.docx",
+    "source_revision": "2016-12-15T12:03:00+00:00",
+    "publisher": [
+      "Home Office"
+    ],
+    "publication_content_id": "6da71cc4-a215-4531-b1c5-b8a70c4ab930",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-bribery-and-corruption-assessment-template-1.docx",
+    "group_id": "gov-uk-family:bribery-and-corruption-assessment-template",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Home Office; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/bribery-and-corruption-assessment-template. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "71fea99a9c73ca88fb144c00a2dc4797bd1d08baeae2e44bc955fcfffebe9def",
+    "bytes": 101861,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-carriage-of-dangerous-goods-annual-report-template-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Carriage of dangerous goods annual report template",
+    "publication_url": "https://www.gov.uk/government/publications/carriage-of-dangerous-goods-annual-report-template",
+    "source_url": "https://assets.publishing.service.gov.uk/media/69f1e0290bb62e692c5d6df7/dgsa-annual-audit-report-dangerous-goods.docx",
+    "source_revision": "2026-05-06T14:06:22+01:00",
+    "publisher": [
+      "Department for Transport"
+    ],
+    "publication_content_id": "4faf5bcb-1f02-4a7b-8d0a-356b9bbe92c7",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-carriage-of-dangerous-goods-annual-report-template-1.docx",
+    "group_id": "gov-uk-family:carriage-of-dangerous-goods-annual-report-template",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Transport; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/carriage-of-dangerous-goods-annual-report-template. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "d5488ec9bf674d4bf16dbec8fa89c6f5616c7712af9d495e129173f7f2ef7efe",
+    "bytes": 1538026,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-explanatory-memorandum-template-and-guidance-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Explanatory Memorandum Template 2025-01",
+    "publication_url": "https://www.gov.uk/government/publications/explanatory-memorandum-template-and-guidance",
+    "source_url": "https://assets.publishing.service.gov.uk/media/68878004ac2c821a74bbec84/EM_Template_2025_-_Final.docx",
+    "source_revision": "2025-08-15T08:54:31+01:00",
+    "publisher": [
+      "Cabinet Office"
+    ],
+    "publication_content_id": "426d7334-bf37-4acf-965f-24361f4001f3",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-explanatory-memorandum-template-and-guidance-1.docx",
+    "group_id": "gov-uk-family:explanatory-memorandum-template-and-guidance",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Cabinet Office; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/explanatory-memorandum-template-and-guidance. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "b8f862765b88b17ae5f55709a11c6e8fa27e1fc3a9e266a8460d986c463b1474",
+    "bytes": 34172,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-guidance-for-seed-sourcing-grant-recipients-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Report template: end of year",
+    "publication_url": "https://www.gov.uk/government/publications/guidance-for-seed-sourcing-grant-recipients",
+    "source_url": "https://assets.publishing.service.gov.uk/media/699dd5523e672177d0bc75d3/SSG_End_of_25-26_Report_Template.docx",
+    "source_revision": "2026-03-04T10:13:00+00:00",
+    "publisher": [
+      "Forestry Commission"
+    ],
+    "publication_content_id": "ec886a8b-5a4b-461e-a32c-e48f532a7ab9",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-guidance-for-seed-sourcing-grant-recipients-1.docx",
+    "group_id": "gov-uk-family:guidance-for-seed-sourcing-grant-recipients",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Forestry Commission; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/guidance-for-seed-sourcing-grant-recipients. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "da1f2bdb2f2e8df2429b08ceb72ece3d9fc9e14239f65030623dc895fc5a02ed",
+    "bytes": 91378,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-impact-assessment-template-for-government-policies-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Regulatory impact assessment template (2023 reforms)",
+    "publication_url": "https://www.gov.uk/government/publications/impact-assessment-template-for-government-policies",
+    "source_url": "https://assets.publishing.service.gov.uk/media/686e6ff5fe1a249e937cbebc/impact-assessment-template-2023-reforms.docx",
+    "source_revision": "2025-07-10T09:34:46+01:00",
+    "publisher": [
+      "Department for Business, Innovation, Science and Trade",
+      "Department for Business and Trade",
+      "Department for Business, Energy & Industrial Strategy"
+    ],
+    "publication_content_id": "5c97c2e1-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-impact-assessment-template-for-government-policies-1.docx",
+    "group_id": "gov-uk-family:impact-assessment-template-for-government-policies",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Business, Innovation, Science and Trade, Department for Business and Trade, Department for Business, Energy & Industrial Strategy; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/impact-assessment-template-for-government-policies. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "a5077259565043a943f47112de7e0da1a7ddede0e3dee7f5db5a93e92da7d020",
+    "bytes": 115809,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-impact-assessment-template-for-government-policies-2",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Options assessment template (2023 reforms)",
+    "publication_url": "https://www.gov.uk/government/publications/impact-assessment-template-for-government-policies",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6810a2f3ddb2b0afb5e041d0/options_assessment_template_2023_reforms.docx",
+    "source_revision": "2025-07-10T09:34:46+01:00",
+    "publisher": [
+      "Department for Business, Innovation, Science and Trade",
+      "Department for Business and Trade",
+      "Department for Business, Energy & Industrial Strategy"
+    ],
+    "publication_content_id": "5c97c2e1-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-impact-assessment-template-for-government-policies-2.docx",
+    "group_id": "gov-uk-family:impact-assessment-template-for-government-policies",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Business, Innovation, Science and Trade, Department for Business and Trade, Department for Business, Energy & Industrial Strategy; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/impact-assessment-template-for-government-policies. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "848160f9057bd31a27bf62a03d70a176b67144ed0df01ff76ebcc1446c33cce7",
+    "bytes": 106259,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-local-restrictions-support-grants-lrsg-and-additional-restrictions-grant-arg-guidance-for-local-authorities-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Debt recovery, returning reclaimed grants and referring outstanding debts to the department: guidance for local authorities (revised July 2025)",
+    "publication_url": "https://www.gov.uk/government/publications/local-restrictions-support-grants-lrsg-and-additional-restrictions-grant-arg-guidance-for-local-authorities",
+    "source_url": "https://assets.publishing.service.gov.uk/media/687e0dde21694022e4224e85/covid-grants-debt-recovery-reclaimed-grants-outstanding-debts-V7_July_2025.docx",
+    "source_revision": "2025-07-23T16:31:55+01:00",
+    "publisher": [
+      "Department for Business, Innovation, Science and Trade",
+      "Department for Business and Trade"
+    ],
+    "publication_content_id": "6cbc3c3d-fd63-48ff-befc-895639deebd8",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-local-restrictions-support-grants-lrsg-and-additional-restrictions-grant-arg-guidance-for-local-authorities-1.docx",
+    "group_id": "gov-uk-family:local-restrictions-support-grants-lrsg-and-additional-restrictions-grant-arg-guidance-for-local-authorities",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Business, Innovation, Science and Trade, Department for Business and Trade; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/local-restrictions-support-grants-lrsg-and-additional-restrictions-grant-arg-guidance-for-local-authorities. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "b0db7941eeb69874a8f196ea33dfe91074d7a4b8c306ddcd70e5af697f39ce01",
+    "bytes": 107962,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-managing-public-money-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Template Delegated Authority Letter – Departments",
+    "publication_url": "https://www.gov.uk/government/publications/managing-public-money",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6a79d84b29aec7cd59ccc0ac/Template_Delegated_Authority_Letter_-_Departments.docx",
+    "source_revision": "2026-08-13T15:53:06+01:00",
+    "publisher": [
+      "HM Treasury"
+    ],
+    "publication_content_id": "5dffe57d-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-managing-public-money-1.docx",
+    "group_id": "gov-uk-family:managing-public-money",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by HM Treasury; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/managing-public-money. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "a08ab2a3c08d7d4fda93af11ea57049e242a1cec6760c6405f019faa34dd4dbf",
+    "bytes": 104008,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-managing-public-money-framework-documents-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Template framework document: Non-departmental public bodies",
+    "publication_url": "https://www.gov.uk/government/publications/managing-public-money-framework-documents",
+    "source_url": "https://assets.publishing.service.gov.uk/media/62de789a8fa8f56496f81f02/Template_Framework_Document_-_Non-departmental_public_bodies.docx",
+    "source_revision": "2022-07-25T12:06:59+01:00",
+    "publisher": [
+      "HM Treasury"
+    ],
+    "publication_content_id": "362434fd-d1c9-40ef-b3c4-c5c80f9a8c0e",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-managing-public-money-framework-documents-1.docx",
+    "group_id": "gov-uk-family:managing-public-money-framework-documents",
+    "split": "development",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by HM Treasury; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/managing-public-money-framework-documents. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "8c93849457af89da9231e3c529bff058b7f18ae4439b8cb0471e3a1fa21235ae",
+    "bytes": 590336,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-financial-remedy-summary-of-case-form-es1-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Financial remedy summary of case: Form ES1 - for Microsoft Word",
+    "publication_url": "https://www.gov.uk/government/publications/financial-remedy-summary-of-case-form-es1",
+    "source_url": "https://assets.publishing.service.gov.uk/media/68d50dff9ce370a7e0a0fc9a/Template_ES1.docx",
+    "source_revision": "2026-04-20T14:14:57+01:00",
+    "publisher": [
+      "HM Courts & Tribunals Service"
+    ],
+    "publication_content_id": "5d96f98b-9a79-46b2-a42d-964178de85b7",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-financial-remedy-summary-of-case-form-es1-1.docx",
+    "group_id": "gov-uk-family:financial-remedy-summary-of-case-form-es1",
+    "split": "calibration",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by HM Courts & Tribunals Service; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/financial-remedy-summary-of-case-form-es1. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "d4a31c4af8f0a31f5022330e4072b7cd4719a9c97eafe03f969a77350b954ea3",
+    "bytes": 22923,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-independent-examiners-report-template-for-receipts-and-payments-accounts-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Independent examiner's report template for Receipts & Payments accounts",
+    "publication_url": "https://www.gov.uk/government/publications/independent-examiners-report-template-for-receipts-and-payments-accounts",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5be2c8a3e5274a0847c448d8/Independent_examiner_s_report_template_R_P_accounts_Oct_2018.docx",
+    "source_revision": "2017-12-14T08:54:00+00:00",
+    "publisher": [
+      "The Charity Commission"
+    ],
+    "publication_content_id": "9cbe4a5a-c39b-45a4-85ad-e7dd3bd603f5",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-independent-examiners-report-template-for-receipts-and-payments-accounts-1.docx",
+    "group_id": "gov-uk-family:charity-accounts",
+    "split": "calibration",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by The Charity Commission; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/independent-examiners-report-template-for-receipts-and-payments-accounts. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "1e80983047b04abda15bdb35985b7246e033a05015209f7b774f8c06e5a662e2",
+    "bytes": 63891,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-the-right-to-request-flexible-working-form-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "The right to request flexible working: application form template (.docx)",
+    "publication_url": "https://www.gov.uk/government/publications/the-right-to-request-flexible-working-form",
+    "source_url": "https://assets.publishing.service.gov.uk/media/65f1a247981227a772f6136e/request-flexible-working-docx-form.docx",
+    "source_revision": "2024-04-06T00:01:02+01:00",
+    "publisher": [
+      "Department for Business, Innovation, Science and Trade",
+      "Department for Business and Trade"
+    ],
+    "publication_content_id": "5fa5c977-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-the-right-to-request-flexible-working-form-1.docx",
+    "group_id": "gov-uk-family:the-right-to-request-flexible-working-form",
+    "split": "calibration",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Business, Innovation, Science and Trade, Department for Business and Trade; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/the-right-to-request-flexible-working-form. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "055fe6227daa62d63d0764158214c9a7bdac55427b37cd27229118efa65bc673",
+    "bytes": 20535,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-fcerm-business-case-templates-3",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Business case template - supported change",
+    "publication_url": "https://www.gov.uk/government/publications/fcerm-business-case-templates",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6a05ec05da82768016cb3fb7/03_Business_case_template_-_supported_change.docx",
+    "source_revision": "2026-07-21T10:35:52+01:00",
+    "publisher": [
+      "Environment Agency"
+    ],
+    "publication_content_id": "60239c92-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-fcerm-business-case-templates-3.docx",
+    "group_id": "gov-uk-family:business-case",
+    "split": "holdout",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Environment Agency; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/fcerm-business-case-templates. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "6027a52843818a0b9eb1e593a5e084dc870c39d0335ed81274cc51ba2c115d26",
+    "bytes": 114906,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-response-template-for-applicants-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Applicant's response template",
+    "publication_url": "https://www.gov.uk/government/publications/response-template-for-applicants",
+    "source_url": "https://assets.publishing.service.gov.uk/media/640067008fa8f527f4f54b37/Applicant_s_response_template.docx",
+    "source_revision": "2023-03-03T15:14:00+00:00",
+    "publisher": [
+      "Medicines and Healthcare products Regulatory Agency"
+    ],
+    "publication_content_id": "e3df4b22-4f04-4d85-b9ab-e0bfee6dcfba",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-response-template-for-applicants-1.docx",
+    "group_id": "gov-uk-family:response-template-for-applicants",
+    "split": "holdout",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Medicines and Healthcare products Regulatory Agency; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/response-template-for-applicants. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "3d709b94da96e91c83e7c901b3b1dca1b4d1403f0602696eff8c77973d2aae92",
+    "bytes": 67023,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-docx-the-green-book-templates-and-support-material-1",
+    "source": "gov_uk_docx",
+    "format": "docx",
+    "title": "Template for medium-cost risk Business Justification",
+    "publication_url": "https://www.gov.uk/government/publications/the-green-book-templates-and-support-material",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5fb25ef8e90e0709e7e68fa0/Template_for_medium-cost-risk_business-justification-case.docx",
+    "source_revision": "2026-02-05T15:30:02+00:00",
+    "publisher": [
+      "HM Treasury"
+    ],
+    "publication_content_id": "856df8a1-ee59-4ff3-bfab-6a1a079fc877",
+    "path": "eval/downloads/corpus/gov_uk_docx/gov-uk-docx-the-green-book-templates-and-support-material-1.docx",
+    "group_id": "gov-uk-family:business-case",
+    "split": "holdout",
+    "pages_reported": null,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by HM Treasury; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/the-green-book-templates-and-support-material. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "semantic_blocks"
+    ],
+    "sha256": "f7bac392662a0a50a7499c36d9b474afaacad0d95ad862959bb531a30a2fa35c",
+    "bytes": 45750,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-agroforestry-plan-pa4-complete-your-templates-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Agroforestry plan template",
+    "publication_url": "https://www.gov.uk/government/publications/agroforestry-plan-pa4-complete-your-templates",
+    "source_url": "https://assets.publishing.service.gov.uk/media/670645a0366f494ab2e7b544/PA4_Agroforestry_plan_-_template.pdf",
+    "source_revision": "2025-06-09T11:43:43+01:00",
+    "publisher": [
+      "Department for Environment, Food & Rural Affairs",
+      "Forestry Commission",
+      "Natural England",
+      "Rural Payments Agency"
+    ],
+    "publication_content_id": "01236d39-257a-4ba1-8f83-98319d4e3bc2",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-agroforestry-plan-pa4-complete-your-templates-1.pdf",
+    "group_id": "gov-uk-family:agroforestry-plan-pa4-complete-your-templates",
+    "split": "development",
+    "pages_reported": 27,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Environment, Food & Rural Affairs, Forestry Commission, Natural England, Rural Payments Agency; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/agroforestry-plan-pa4-complete-your-templates. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "c89e53d23e204bda07bf9db142016557a0fb863e8d1f6f9a40564a40f73d0068",
+    "bytes": 392592,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-application-for-an-environmental-permit-part-b10-flood-risk-activities-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Part B10 application form",
+    "publication_url": "https://www.gov.uk/government/publications/application-for-an-environmental-permit-part-b10-flood-risk-activities",
+    "source_url": "https://assets.publishing.service.gov.uk/media/66d820a05187a43f682dde07/E03125890_Part_B10_Form_Web_Accessible_v02.pdf",
+    "source_revision": "2024-09-04T14:06:41+01:00",
+    "publisher": [
+      "Environment Agency",
+      "Department for Environment, Food & Rural Affairs"
+    ],
+    "publication_content_id": "8dfeb29e-d01f-47d6-ae8f-687665ed0f78",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-application-for-an-environmental-permit-part-b10-flood-risk-activities-1.pdf",
+    "group_id": "gov-uk-family:application-for-an-environmental-permit-part-b10-flood-risk-activities",
+    "split": "development",
+    "pages_reported": 5,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Environment Agency, Department for Environment, Food & Rural Affairs; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/application-for-an-environmental-permit-part-b10-flood-risk-activities. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "54d5cc65e3ae31cd51ac422986a93dbf6886b6b36a41dc53aebe1e9ae683fde9",
+    "bytes": 109053,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-apply-for-help-with-court-and-tribunal-fees-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Application form: EX160",
+    "publication_url": "https://www.gov.uk/government/publications/apply-for-help-with-court-and-tribunal-fees",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6908bde35e080b1224898186/EX160_1123_v2_save.pdf",
+    "source_revision": "2026-01-19T11:41:03+00:00",
+    "publisher": [
+      "Ministry of Justice",
+      "HM Courts & Tribunals Service"
+    ],
+    "publication_content_id": "d6204ab9-99fd-4265-a081-5e4c6fdfe11d",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-apply-for-help-with-court-and-tribunal-fees-1.pdf",
+    "group_id": "gov-uk-family:apply-for-help-with-court-and-tribunal-fees",
+    "split": "development",
+    "pages_reported": 8,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Ministry of Justice, HM Courts & Tribunals Service; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/apply-for-help-with-court-and-tribunal-fees. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "3512d5bcf4242d64066cfdb40bc0ffaf58511ca8b713390c22e45c294bd4bea2",
+    "bytes": 237322,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-climate-change-agreements-scheme-templates-for-umbrella-and-underlying-agreements-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Umbrella Climate Change Agreement template",
+    "publication_url": "https://www.gov.uk/government/publications/climate-change-agreements-scheme-templates-for-umbrella-and-underlying-agreements",
+    "source_url": "https://assets.publishing.service.gov.uk/media/69ef25e3606c20d412163400/CCA-umbrella-agreement.pdf",
+    "source_revision": "2026-04-28T10:09:23+01:00",
+    "publisher": [
+      "Department for Energy Security and Net Zero",
+      "Department for Business, Energy & Industrial Strategy"
+    ],
+    "publication_content_id": "967ff591-aa9f-4938-a0c3-baad2c80db17",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-climate-change-agreements-scheme-templates-for-umbrella-and-underlying-agreements-1.pdf",
+    "group_id": "gov-uk-family:climate-change-agreements-scheme-templates-for-umbrella-and-underlying-agreements",
+    "split": "development",
+    "pages_reported": 23,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Energy Security and Net Zero, Department for Business, Energy & Industrial Strategy; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/climate-change-agreements-scheme-templates-for-umbrella-and-underlying-agreements. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "1d936d8ad994adf7457af98df19e0c310aee9e805d1220f89f32a8cc6b2e33bd",
+    "bytes": 234524,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-cma-informal-guidance-fairtrade-environmental-sustainability-agreement-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Fairtrade Foundation informal guidance",
+    "publication_url": "https://www.gov.uk/government/publications/cma-informal-guidance-fairtrade-environmental-sustainability-agreement",
+    "source_url": "https://assets.publishing.service.gov.uk/media/65799999095987001295dfb1/A._Fairtrade_Foundation_informal_guidance.pdf",
+    "source_revision": "2023-12-14T00:00:00+00:00",
+    "publisher": [
+      "Competition and Markets Authority"
+    ],
+    "publication_content_id": "e640e6f0-13ca-43f8-9ddc-f82fe948ae6a",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-cma-informal-guidance-fairtrade-environmental-sustainability-agreement-1.pdf",
+    "group_id": "gov-uk-family:cma-informal-guidance-fairtrade-environmental-sustainability-agreement",
+    "split": "development",
+    "pages_reported": 13,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Competition and Markets Authority; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/cma-informal-guidance-fairtrade-environmental-sustainability-agreement. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "f7c5727ba867e8874331f301d0e9ad10e5171f7657e164f6c134f175c9160ad3",
+    "bytes": 253330,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-defras-draft-social-and-environmental-guidance-to-ofwat-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Defra's social and environmental guidance to Ofwat:2nd ed - Full Text",
+    "publication_url": "https://www.gov.uk/government/publications/defras-draft-social-and-environmental-guidance-to-ofwat",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a750d22e5274a59fa717030/9780108512261.pdf",
+    "source_revision": "2013-03-14T00:00:00+00:00",
+    "publisher": [
+      "Department for Environment, Food & Rural Affairs"
+    ],
+    "publication_content_id": "5e941066-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-defras-draft-social-and-environmental-guidance-to-ofwat-1.pdf",
+    "group_id": "gov-uk-family:defras-draft-social-and-environmental-guidance-to-ofwat",
+    "split": "development",
+    "pages_reported": 51,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Environment, Food & Rural Affairs; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/defras-draft-social-and-environmental-guidance-to-ofwat. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "f12d88d79bdf05a6b7ebb174eb777c1bdd1fb4522c7aaf960a0bcc6d76a63969",
+    "bytes": 510176,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Disabled Facilities Grant (DFG) delivery: Guidance for local authorities in England",
+    "publication_url": "https://www.gov.uk/government/publications/disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england",
+    "source_url": "https://assets.publishing.service.gov.uk/media/669a4302a3c2a28abb50d2d5/DFG_Guidance.pdf",
+    "source_revision": "2022-03-28T00:00:00+01:00",
+    "publisher": [
+      "Ministry of Housing, Communities and Local Government",
+      "Department of Health and Social Care",
+      "Department for Levelling Up, Housing and Communities "
+    ],
+    "publication_content_id": "518af794-e185-46ab-bb15-85b20dceb56f",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england-1.pdf",
+    "group_id": "gov-uk-family:disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england",
+    "split": "development",
+    "pages_reported": 91,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Ministry of Housing, Communities and Local Government, Department of Health and Social Care, Department for Levelling Up, Housing and Communities ; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "5ce0f674a72774c0aa0229db3b12de789f593c8ee35c72920cf50a375702d874",
+    "bytes": 1156709,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-gce-subject-level-guidance-for-environmental-science-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "GCE Subject Level Guidance for Environmental Science",
+    "publication_url": "https://www.gov.uk/government/publications/gce-subject-level-guidance-for-environmental-science",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a8153fa40f0b62305b8e5bd/gce-subject-level-guidance-for-environmental-science.pdf",
+    "source_revision": "2016-03-01T10:05:40+00:00",
+    "publisher": [
+      "Ofqual"
+    ],
+    "publication_content_id": "9d8b28fe-b8dd-414a-bef1-717942876fc8",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-gce-subject-level-guidance-for-environmental-science-1.pdf",
+    "group_id": "gov-uk-family:gce-subject-level-guidance-for-environmental-science",
+    "split": "development",
+    "pages_reported": 10,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Ofqual; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/gce-subject-level-guidance-for-environmental-science. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "984c16dc6d1e82063a27f2aca7e0d9c634564fc30cd6d7c8d478635bcf057ad3",
+    "bytes": 442592,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-granting-a-necessary-compulsory-electricity-wayleave-guidance-for-applicants-and-landowner-and-or-occupiers-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Application to the Secretary of State for Energy & Climate Change  from 1 October 2013 for the grant of a necessary (compulsory) electricity wayleave in England and Wales: guidance for applicants and landowners and/or occupiers",
+    "publication_url": "https://www.gov.uk/government/publications/granting-a-necessary-compulsory-electricity-wayleave-guidance-for-applicants-and-landowner-and-or-occupiers",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a756afae5274a3edd9a4c25/wayleave_guidance.pdf",
+    "source_revision": "2014-01-24T10:01:51+00:00",
+    "publisher": [
+      "Department of Energy & Climate Change"
+    ],
+    "publication_content_id": "5d29ed39-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-granting-a-necessary-compulsory-electricity-wayleave-guidance-for-applicants-and-landowner-and-or-occupiers-1.pdf",
+    "group_id": "gov-uk-family:granting-a-necessary-compulsory-electricity-wayleave-guidance-for-applicants-and-landowner-and-or-occupiers",
+    "split": "development",
+    "pages_reported": 39,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department of Energy & Climate Change; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/granting-a-necessary-compulsory-electricity-wayleave-guidance-for-applicants-and-landowner-and-or-occupiers. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "8997a7e14ffd26308b2b7baa561cc714a22fc2b16ca969a89156f9aa9a09447e",
+    "bytes": 718057,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-humanitarian-protection-instruction-2",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Humanitarian protection in asylum claims lodged on or after 28 June 2022",
+    "publication_url": "https://www.gov.uk/government/publications/humanitarian-protection-instruction",
+    "source_url": "https://assets.publishing.service.gov.uk/media/64c8e3ea19f5622360f3c0e0/Humanitarian_Protection_-_claims_lodged_on_or_after_28_June_2022.pdf",
+    "source_revision": "2023-08-01T12:37:48+01:00",
+    "publisher": [
+      "UK Visas and Immigration"
+    ],
+    "publication_content_id": "5ec11e80-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-humanitarian-protection-instruction-2.pdf",
+    "group_id": "gov-uk-family:humanitarian-protection-instruction",
+    "split": "development",
+    "pages_reported": 28,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by UK Visas and Immigration; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/humanitarian-protection-instruction. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "f91ca806448f226280361e3e44c843e5ebb0119023bbb97b045f20c48e6f8899",
+    "bytes": 334252,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-procurement-policy-note-09-12-taking-account-of-bidders-past-performance-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Taking account of bidders' past performance",
+    "publication_url": "https://www.gov.uk/government/publications/procurement-policy-note-09-12-taking-account-of-bidders-past-performance",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a78c67040f0b62b22cbcb35/PPN_Taking_Account_of_Bidders_Past_Performance_08-11-12_1.pdf",
+    "source_revision": "2012-11-08T00:00:00+00:00",
+    "publisher": [
+      "Cabinet Office",
+      "Efficiency and Reform Group",
+      "Crown Commercial Service"
+    ],
+    "publication_content_id": "5d5eba70-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-procurement-policy-note-09-12-taking-account-of-bidders-past-performance-1.pdf",
+    "group_id": "gov-uk-family:procurement-policy-notes",
+    "split": "development",
+    "pages_reported": 19,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Cabinet Office, Efficiency and Reform Group, Crown Commercial Service; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/procurement-policy-note-09-12-taking-account-of-bidders-past-performance. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "e5e91f0b8da9daed9590d2fbf5bea0da7586c9df0b01b927898db1f1e0ec5518",
+    "bytes": 438739,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-procurement-policy-note-0613-promoting-tax-compliance-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Procurement Policy Note: Measures to Promote Tax Compliance",
+    "publication_url": "https://www.gov.uk/government/publications/procurement-policy-note-0613-promoting-tax-compliance",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a7c519eed915d338141e03f/PPN_2_TAX.pdf",
+    "source_revision": "2013-07-25T16:46:00+01:00",
+    "publisher": [
+      "Cabinet Office",
+      "Crown Commercial Service"
+    ],
+    "publication_content_id": "5e5c65e1-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-procurement-policy-note-0613-promoting-tax-compliance-1.pdf",
+    "group_id": "gov-uk-family:procurement-policy-notes",
+    "split": "development",
+    "pages_reported": 10,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Cabinet Office, Crown Commercial Service; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/procurement-policy-note-0613-promoting-tax-compliance. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "e1e1e60d48a4ad6ed85f2dcfa397e08cf46d2aa6e8848d605bbd93615a2e5466",
+    "bytes": 432207,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-receipts-and-payments-accounts-cc16-charity-accounting-template-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Completion notes for the receipts and payments accounts pack (CC16b)",
+    "publication_url": "https://www.gov.uk/government/publications/receipts-and-payments-accounts-cc16-charity-accounting-template",
+    "source_url": "https://assets.publishing.service.gov.uk/media/5a7f7d0fed915d74e622ac49/CC16b.pdf",
+    "source_revision": "2013-04-01T00:00:00+01:00",
+    "publisher": [
+      "The Charity Commission"
+    ],
+    "publication_content_id": "5ff00abd-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-receipts-and-payments-accounts-cc16-charity-accounting-template-1.pdf",
+    "group_id": "gov-uk-family:charity-accounts",
+    "split": "calibration",
+    "pages_reported": 8,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by The Charity Commission; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/receipts-and-payments-accounts-cc16-charity-accounting-template. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "14f7b096038eaf3a1d58876607d4f0bb8ea299887b65a2aafec05cb47a3d995d",
+    "bytes": 229665,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-warm-homes-local-grant-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Warm Homes: Local Grant - policy guidance (updated July 2026)",
+    "publication_url": "https://www.gov.uk/government/publications/warm-homes-local-grant",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6a4629fa732d8e7ce5f53b13/warm-homes-local-grant-policy-guidance-july-2026.pdf",
+    "source_revision": "2026-07-02T10:18:20+01:00",
+    "publisher": [
+      "Department for Energy Security and Net Zero"
+    ],
+    "publication_content_id": "cb1b9d9d-91f3-4739-9e56-20e70dff1680",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-warm-homes-local-grant-1.pdf",
+    "group_id": "gov-uk-family:warm-homes-local-grant",
+    "split": "calibration",
+    "pages_reported": 59,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Energy Security and Net Zero; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/warm-homes-local-grant. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "d3273e5a958481ba8caeb3bfc69b6f08e2f3b1322c4a0e1b318135648a5e69b8",
+    "bytes": 730463,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-fcdo-services-annual-report-and-accounts-2024-to-2025-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "FCDO Services Annual Report and Accounts 2024 to 2025",
+    "publication_url": "https://www.gov.uk/government/publications/fcdo-services-annual-report-and-accounts-2024-to-2025",
+    "source_url": "https://assets.publishing.service.gov.uk/media/686644b9e6557c544c74db84/FCDO_Services_Annual_Report_and_Accounts_2024_to_2025.pdf",
+    "source_revision": "2025-07-04T00:00:00+01:00",
+    "publisher": [
+      "FCDO Services "
+    ],
+    "publication_content_id": "ac29ba4a-b8ee-49f3-b9ec-77f5902acd12",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-fcdo-services-annual-report-and-accounts-2024-to-2025-1.pdf",
+    "group_id": "gov-uk-family:fcdo-services-annual-report-and-accounts-2024-to-2025",
+    "split": "calibration",
+    "pages_reported": 57,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by FCDO Services ; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/fcdo-services-annual-report-and-accounts-2024-to-2025. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "bf8304f47e64b22ba5c310c01d5dd6d95e8653e0ac6aa120dd640680e246509c",
+    "bytes": 1899621,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-template-holding-register-for-cattle-keepers-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Template holding register for cattle",
+    "publication_url": "https://www.gov.uk/government/publications/template-holding-register-for-cattle-keepers",
+    "source_url": "https://assets.publishing.service.gov.uk/media/64d1801e7a5708001314487e/Template_holding_register_for_cattle.pdf",
+    "source_revision": "2023-08-09T12:25:09+01:00",
+    "publisher": [
+      "British Cattle Movement Service",
+      "Rural Payments Agency"
+    ],
+    "publication_content_id": "bbd5f0cc-be7e-4539-8aba-3559047c9108",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-template-holding-register-for-cattle-keepers-1.pdf",
+    "group_id": "gov-uk-family:template-holding-register-for-cattle-keepers",
+    "split": "calibration",
+    "pages_reported": 13,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by British Cattle Movement Service, Rural Payments Agency; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/template-holding-register-for-cattle-keepers. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "7f011352f6bc24ce28b8af1e09eccf067ae7d44768b3e10b8a29f10955f8f89c",
+    "bytes": 373497,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-sovereign-grant-act-2011-guidance-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Sovereign Grant Act 2011 guidance",
+    "publication_url": "https://www.gov.uk/government/publications/sovereign-grant-act-2011-guidance",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6a3e5d1a33bc5beefd3c4b9b/Sovereign_Grant_Act_2011_guidance.pdf",
+    "source_revision": "2025-08-05T12:04:12+01:00",
+    "publisher": [
+      "HM Treasury"
+    ],
+    "publication_content_id": "5ef7f149-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-sovereign-grant-act-2011-guidance-1.pdf",
+    "group_id": "gov-uk-family:sovereign-grant-act-2011-guidance",
+    "split": "holdout",
+    "pages_reported": 4,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by HM Treasury; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/sovereign-grant-act-2011-guidance. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "01dba37e8a2fb56c9448b780f1a55ab6ba69746b329f0749e5437220835e895b",
+    "bytes": 134315,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-winter-fuel-payment-claim-form-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "Winter Fuel Payment application form",
+    "publication_url": "https://www.gov.uk/government/publications/winter-fuel-payment-claim-form",
+    "source_url": "https://assets.publishing.service.gov.uk/media/6a998794f5b35599aec191ba/winter-fuel-payment-form-2026-to-2027.pdf",
+    "source_revision": "2026-09-21T00:01:01+01:00",
+    "publisher": [
+      "Department for Work and Pensions"
+    ],
+    "publication_content_id": "5e5b3cbd-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-winter-fuel-payment-claim-form-1.pdf",
+    "group_id": "gov-uk-family:winter-fuel-payment-claim-form",
+    "split": "holdout",
+    "pages_reported": 7,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Department for Work and Pensions; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/winter-fuel-payment-claim-form. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "50e698b1d38ea6205c91a14360ca62cb7c16bc635e9570994b161287d292767f",
+    "bytes": 220922,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-the-national-gallery-annual-report-and-accounts-2024-to-2025-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "The National Gallery Annual Report and Accounts 2024 to 2025",
+    "publication_url": "https://www.gov.uk/government/publications/the-national-gallery-annual-report-and-accounts-2024-to-2025",
+    "source_url": "https://assets.publishing.service.gov.uk/media/688895a66478525675738f2d/e03304688_national-gallery-ara-2024-25_accessible__1_.pdf",
+    "source_revision": "2025-07-29T10:34:46+01:00",
+    "publisher": [
+      "National Gallery"
+    ],
+    "publication_content_id": "f0d67262-896c-4a6c-b113-4535e94a7e1b",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-the-national-gallery-annual-report-and-accounts-2024-to-2025-1.pdf",
+    "group_id": "gov-uk-family:the-national-gallery-annual-report-and-accounts-2024-to-2025",
+    "split": "holdout",
+    "pages_reported": 77,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by National Gallery; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/the-national-gallery-annual-report-and-accounts-2024-to-2025. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "a6c4c4f72840cd84c87fc55fbb3f32ad1d9ea08fae710e336d8056b76f178578",
+    "bytes": 676067,
+    "status": "downloaded"
+  },
+  {
+    "case_id": "gov-uk-pdf-application-for-a-vehicle-registration-certificate-1",
+    "source": "gov_uk_pdf",
+    "format": "pdf",
+    "title": "V62",
+    "publication_url": "https://www.gov.uk/government/publications/application-for-a-vehicle-registration-certificate",
+    "source_url": "https://assets.publishing.service.gov.uk/media/691afc5a0dcbf6343e9a2883/v62-application-for-a-registration-certificate.pdf",
+    "source_revision": "2026-03-11T09:05:12+00:00",
+    "publisher": [
+      "Driver and Vehicle Licensing Agency"
+    ],
+    "publication_content_id": "5e169a54-7631-11e4-a3cb-005056011aef",
+    "path": "eval/downloads/corpus/gov_uk_pdf/gov-uk-pdf-application-for-a-vehicle-registration-certificate-1.pdf",
+    "group_id": "gov-uk-family:application-for-a-vehicle-registration-certificate",
+    "split": "holdout",
+    "pages_reported": 2,
+    "license": "OGL-3.0-where-applicable",
+    "license_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/",
+    "attribution": "Contains public sector information published by Driver and Vehicle Licensing Agency; Crown copyright where applicable. Source: https://www.gov.uk/government/publications/application-for-a-vehicle-registration-certificate. OGL v3.0 subject to document-specific exclusions.",
+    "rights_status": "official_source; file_specific_ogl_exclusions_review_pending",
+    "evaluation_ready": false,
+    "tags": [
+      "government",
+      "multi_page"
+    ],
+    "sha256": "6bcfce1aba9378e6ceaa7ffec20d6c3053902f1cb208e731b6202b5e332dda34",
+    "bytes": 1872218,
+    "status": "downloaded"
+  }
+]

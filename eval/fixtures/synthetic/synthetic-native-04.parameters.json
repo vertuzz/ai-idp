@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-NATIVE-04",
+  "title": "Laboratory cost record",
+  "period": "2026-Q3",
+  "currency": "EUR",
+  "net_total": 1611,
+  "approved_total": 1686,
+  "issue_date": "2026-09-14",
+  "split": "calibration",
+  "kind": "native",
+  "index": 3,
+  "inspection_status": "PASS"
+}

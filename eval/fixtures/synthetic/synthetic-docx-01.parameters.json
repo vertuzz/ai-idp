@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-DOCX-01",
+  "title": "Operating expense review",
+  "period": "2026-Q3",
+  "currency": "EUR",
+  "net_total": 1242,
+  "approved_total": 1317,
+  "issue_date": "2026-09-11",
+  "split": "development",
+  "kind": "docx",
+  "index": 0,
+  "inspection_status": "PASS"
+}

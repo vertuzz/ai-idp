@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-NATIVE-05",
+  "title": "Transport settlement statement",
+  "period": "2026-Q3",
+  "currency": "GBP",
+  "net_total": 1748,
+  "approved_total": 1823,
+  "issue_date": "2026-09-15",
+  "split": "holdout",
+  "kind": "native",
+  "index": 4,
+  "inspection_status": "PASS"
+}

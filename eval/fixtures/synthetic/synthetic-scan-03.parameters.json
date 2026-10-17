@@ -1,0 +1,13 @@
+{
+  "record_id": "TEST-SCAN-03",
+  "title": "Operating expense review",
+  "period": "2026-Q3",
+  "currency": "USD",
+  "net_total": 1495,
+  "approved_total": 1570,
+  "issue_date": "2026-09-13",
+  "split": "development",
+  "kind": "scan",
+  "index": 2,
+  "inspection_status": "PASS"
+}

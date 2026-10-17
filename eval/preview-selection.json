@@ -1,0 +1,29 @@
+{
+  "status": "files_available_annotations_pending",
+  "case_ids": [
+    "doclaynet-13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832",
+    "doclaynet-25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095",
+    "doclaynet-2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15",
+    "doclaynet-63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2",
+    "doclaynet-6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd",
+    "doclaynet-b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25",
+    "doclaynet-61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823",
+    "cord-v2-train-0000",
+    "cord-v2-train-0011",
+    "cord-v2-train-0021",
+    "cord-v2-train-0031",
+    "cord-v2-train-0042",
+    "cord-v2-train-0052",
+    "gov-uk-pdf-agroforestry-plan-pa4-complete-your-templates-1",
+    "gov-uk-pdf-application-for-an-environmental-permit-part-b10-flood-risk-activities-1",
+    "gov-uk-pdf-apply-for-help-with-court-and-tribunal-fees-1",
+    "gov-uk-pdf-climate-change-agreements-scheme-templates-for-umbrella-and-underlying-agreements-1",
+    "gov-uk-docx-bribery-and-corruption-assessment-template-1",
+    "gov-uk-docx-carriage-of-dangerous-goods-annual-report-template-1",
+    "gov-uk-docx-explanatory-memorandum-template-and-guidance-1",
+    "synthetic-docx-01",
+    "synthetic-mixed-01",
+    "synthetic-native-01",
+    "synthetic-scan-01"
+  ]
+}

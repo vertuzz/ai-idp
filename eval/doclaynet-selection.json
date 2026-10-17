@@ -1,0 +1,1717 @@
+[
+  {
+    "case_id": "doclaynet-f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:NASDAQ_PLCE_2001.pdf",
+    "original_page": 8,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.pdf",
+        "sha256": "51e9cf04b2b9cfa581e1d28398d949d8ddde55fcb755c5bdb047fd7621652e02",
+        "archive_member": "PDF/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.pdf",
+        "zip_crc32": "c4672939",
+        "bytes": 57713
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.json",
+        "sha256": "7d734356727625feeecdb41b427dbc9c117dfa15407d02129138b37e37767ae4",
+        "archive_member": "JSON/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.json",
+        "zip_crc32": "78bb86c6",
+        "bytes": 400
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.png",
+        "sha256": "9fc1c9d71493afbe23b55db07cc2ac65227cdec6b38259613b1c6fb6b77b8e36",
+        "archive_member": "PNG/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.png",
+        "zip_crc32": "dc211097",
+        "bytes": 951200
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.pdf",
+    "sha256": "51e9cf04b2b9cfa581e1d28398d949d8ddde55fcb755c5bdb047fd7621652e02",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/f22b6b75085a206fb0c8149151a085da009b86680a46b31dd9cf57428206b6b7.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:EN-c4f annexiitechspeciiitechoffer en.pdf",
+    "original_page": 13,
+    "category": "government_tenders",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.pdf",
+        "sha256": "b76cea5fd4ef7e7b897941635e9dadfd97b1ba4d610c3c0a9b6d9ded795a0603",
+        "archive_member": "PDF/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.pdf",
+        "zip_crc32": "6e0c83a2",
+        "bytes": 109078
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.json",
+        "sha256": "bfe15e3d5efab83a127b6f90eeaea72eb523a64e6098970bc0c75b2b6958fe8d",
+        "archive_member": "JSON/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.json",
+        "zip_crc32": "47536b11",
+        "bytes": 20869
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.png",
+        "sha256": "62f847ec2609b4ae044ad51e80be7396a5a8e59b5db8162c266544c90ce2380d",
+        "archive_member": "PNG/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.png",
+        "zip_crc32": "1494da0d",
+        "bytes": 156934
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.pdf",
+    "sha256": "b76cea5fd4ef7e7b897941635e9dadfd97b1ba4d610c3c0a9b6d9ded795a0603",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/61b0210340f50bf991972b4e97c13bee9b8bf9b0589ec65425abea1d3a124823.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "government_tenders",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:mc4_technical_manual.pdf",
+    "original_page": 213,
+    "category": "laws_and_regulations",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.pdf",
+        "sha256": "6507e64d52d2eea96da90e875c77b3104a3a1003a9d4695304ed670eb7d0c981",
+        "archive_member": "PDF/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.pdf",
+        "zip_crc32": "519e4e60",
+        "bytes": 138309
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.json",
+        "sha256": "21aa982eca597d35af6b60cfb4a8f8c127ba1867fb239b972a410afe6522341c",
+        "archive_member": "JSON/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.json",
+        "zip_crc32": "cc8413fd",
+        "bytes": 4488
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.png",
+        "sha256": "40a0713f7008b88209c3eb043c9da6acac012a5a996470061f3348c4e55ca633",
+        "archive_member": "PNG/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.png",
+        "zip_crc32": "ca86a531",
+        "bytes": 239403
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.pdf",
+    "sha256": "6507e64d52d2eea96da90e875c77b3104a3a1003a9d4695304ed670eb7d0c981",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/25356323c0795b4a7d1ed2198782a293f14098086faa496ccf72bc557cb50095.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "laws_and_regulations",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:python_extending.pdf",
+    "original_page": 33,
+    "category": "manuals",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.pdf",
+        "sha256": "7f28fd4d978bb492a7da3030ed3ebd20a761614e07960b19f887072a1658083a",
+        "archive_member": "PDF/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.pdf",
+        "zip_crc32": "138fd740",
+        "bytes": 51291
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.json",
+        "sha256": "3382a9ffcc145cc0de5475705d9ef2c1ac831c52eb9a5e6da82406d649c7b721",
+        "archive_member": "JSON/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.json",
+        "zip_crc32": "46467e73",
+        "bytes": 34916
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.png",
+        "sha256": "b58221dcae45bce2b825c40f15387c85d01c39fc9ce24dd79e60f7e6011600ff",
+        "archive_member": "PNG/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.png",
+        "zip_crc32": "ef2a0690",
+        "bytes": 322717
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.pdf",
+    "sha256": "7f28fd4d978bb492a7da3030ed3ebd20a761614e07960b19f887072a1658083a",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/f09dc91ec20d409d9c65a4da8dfb255a3f5c7c16f7906a7c30ca992b396911db.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "manuals",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:7541131_AdobeOCR.pdf",
+    "original_page": 22,
+    "category": "patents",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.pdf",
+        "sha256": "e3a363e2221aa1998053ddc3373ff2ef3a66243336db5c8893108688cb0e5dad",
+        "archive_member": "PDF/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.pdf",
+        "zip_crc32": "0d3dbcaf",
+        "bytes": 18896
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.json",
+        "sha256": "7f1d38eebf3f6c5566a6fabcf46aaef3ab23f457054568b5c5151ff8583a0f67",
+        "archive_member": "JSON/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.json",
+        "zip_crc32": "58ab2c69",
+        "bytes": 10186
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.png",
+        "sha256": "322a3e68a6384aec067c1ced9915978359d351ecac8456766f58c4ff82aa9e25",
+        "archive_member": "PNG/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.png",
+        "zip_crc32": "3437b94c",
+        "bytes": 138341
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.pdf",
+    "sha256": "e3a363e2221aa1998053ddc3373ff2ef3a66243336db5c8893108688cb0e5dad",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/d4d20c62fa4a93c0c5874b22301e2d06db3e2e412872b4876693b69768168e46.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "patents",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:1312.0569.pdf",
+    "original_page": 30,
+    "category": "scientific_articles",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.pdf",
+        "sha256": "90fc707b9039691bd153494d9fcd7811a49dd5978670615832e58c049310d10c",
+        "archive_member": "PDF/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.pdf",
+        "zip_crc32": "c6b080c8",
+        "bytes": 50354
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.json",
+        "sha256": "24b5500575f2979063b1b6633781bb89254283b5f75cde1ef659aef1fcc61cc8",
+        "archive_member": "JSON/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.json",
+        "zip_crc32": "f431a3fb",
+        "bytes": 48834
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.png",
+        "sha256": "c0870398f2909bc01d61a4969105e911abba55510b0d08071f403d9e3cdc91eb",
+        "archive_member": "PNG/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.png",
+        "zip_crc32": "7cf912a9",
+        "bytes": 200644
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.pdf",
+    "sha256": "90fc707b9039691bd153494d9fcd7811a49dd5978670615832e58c049310d10c",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/7110562091cea104818be16f5062063cd6c0f645e94bf3fde2ec439deb5f783e.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "scientific_articles",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:0000016918-21-000060_20210420x10k.pdf",
+    "original_page": 58,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.pdf",
+        "sha256": "8c2335b19069fe818658126de94d17260973366e501569281201a59970a492f6",
+        "archive_member": "PDF/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.pdf",
+        "zip_crc32": "8e761fb5",
+        "bytes": 27468
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.json",
+        "sha256": "ff53b0e9e1fc4fa040f446ecbe1353d01e568be7b5b2d4ecd6e221d70eb0c583",
+        "archive_member": "JSON/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.json",
+        "zip_crc32": "e8256d8b",
+        "bytes": 8212
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.png",
+        "sha256": "71dfa1d52fb0fb6d7c7527a88853bc13bf91b4d53f47aa7fe471797bf13f3044",
+        "archive_member": "PNG/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.png",
+        "zip_crc32": "2f17026b",
+        "bytes": 155176
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.pdf",
+    "sha256": "8c2335b19069fe818658126de94d17260973366e501569281201a59970a492f6",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/13c4fb35d4232697685e209c29e371fad5e97b2c1abda98e43501ea64f3ad832.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:EN-Lot1 4 Vol3 d4.3 Section 4 General Requirements en GIR rev6.pdf",
+    "original_page": 0,
+    "category": "government_tenders",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.pdf",
+        "sha256": "8974716da9cc7c28ab01142d086d01001063ecec8e3dfa18a75b7b19d250fbb2",
+        "archive_member": "PDF/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.pdf",
+        "zip_crc32": "aaa1afda",
+        "bytes": 303388
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.json",
+        "sha256": "e04f68bb14233c2b2034eecb5e3587c9d7678be023103a4733600fddd2edd2b5",
+        "archive_member": "JSON/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.json",
+        "zip_crc32": "65338e10",
+        "bytes": 28426
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.png",
+        "sha256": "5ddb9a56d2546215530fa7e0348de984b12ff3015e3e933746fb04c85774fc4e",
+        "archive_member": "PNG/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.png",
+        "zip_crc32": "b251f1ae",
+        "bytes": 293667
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.pdf",
+    "sha256": "8974716da9cc7c28ab01142d086d01001063ecec8e3dfa18a75b7b19d250fbb2",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/2836fafcd10b4627641b153f90b38bf9ebdaee1b5bcf8c49fa51463fce1d6e15.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "government_tenders",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:pilot_handbook.pdf",
+    "original_page": 269,
+    "category": "laws_and_regulations",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.pdf",
+        "sha256": "f13fc5548d9091ab153b04bdc51f927dbabff8d4a95cdd2ceaadcad2dd0ec65d",
+        "archive_member": "PDF/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.pdf",
+        "zip_crc32": "f2248e58",
+        "bytes": 127235
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.json",
+        "sha256": "70fe6464575cbaadc8a1a8f35b8468b9c2eef77d79fe3d3f7ff1c572aa778f0a",
+        "archive_member": "JSON/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.json",
+        "zip_crc32": "1228b5fd",
+        "bytes": 45954
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.png",
+        "sha256": "02a0bd116ca759f751ab134377bbda958158dcc5c8bf028077fd632585bda9e1",
+        "archive_member": "PNG/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.png",
+        "zip_crc32": "a6fa84e3",
+        "bytes": 688370
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.pdf",
+    "sha256": "f13fc5548d9091ab153b04bdc51f927dbabff8d4a95cdd2ceaadcad2dd0ec65d",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/db309ed96f127be22bc17e3df8efefd48325ee68c84459d7a2232b795ddff07b.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "laws_and_regulations",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:refman-8.0-en.pdf",
+    "original_page": 4480,
+    "category": "manuals",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.pdf",
+        "sha256": "2e97d236e6261ff6f22363f91e2726f7bc8362c01e3a7416d948b2455126178e",
+        "archive_member": "PDF/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.pdf",
+        "zip_crc32": "c0df8758",
+        "bytes": 12543
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.json",
+        "sha256": "eef240a8f7946c27c086c57f20cc0812d1d79cf8e318f6c5cd0c28b9d61deedb",
+        "archive_member": "JSON/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.json",
+        "zip_crc32": "94177fbb",
+        "bytes": 44534
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.png",
+        "sha256": "6d5525cd7792477c64e9f776f5d299626ad27331aade9d9af7c09a25c73b506e",
+        "archive_member": "PNG/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.png",
+        "zip_crc32": "d0251e59",
+        "bytes": 212633
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.pdf",
+    "sha256": "2e97d236e6261ff6f22363f91e2726f7bc8362c01e3a7416d948b2455126178e",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/63139873f416bd817b76b631195fd6c199e462f6be37f758c6379d4c992322d2.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "manuals",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:9868761_AdobeOCR.pdf",
+    "original_page": 2,
+    "category": "patents",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.pdf",
+        "sha256": "d723eb793e5f8813e4016250dde79eb011f61dbca95def4bfa03ad4c39803239",
+        "archive_member": "PDF/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.pdf",
+        "zip_crc32": "15bce5a2",
+        "bytes": 50428
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.json",
+        "sha256": "7a51d3b14cfcc7d8d8ea3cab87db25be579fb449b6527c6145c1e8f53762d43a",
+        "archive_member": "JSON/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.json",
+        "zip_crc32": "cf8226de",
+        "bytes": 8168
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.png",
+        "sha256": "76edec3f1e6b48350017c8f2cd8580899d4d150b5014ae7f9354567069dd8c1f",
+        "archive_member": "PNG/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.png",
+        "zip_crc32": "6c7e1771",
+        "bytes": 260064
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.pdf",
+    "sha256": "d723eb793e5f8813e4016250dde79eb011f61dbca95def4bfa03ad4c39803239",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/b9a3b0036494417e8895b2ec667082dfde2d30fdf4bc126b0f6fbb8a5667dc25.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "patents",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:1001.2113.pdf",
+    "original_page": 9,
+    "category": "scientific_articles",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.pdf",
+        "sha256": "17f6a4d896e4e9e44103feb820ee93fc0062317fdcc7fb27a4a00d3f0fc1f7c6",
+        "archive_member": "PDF/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.pdf",
+        "zip_crc32": "6de2c947",
+        "bytes": 69718
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.json",
+        "sha256": "5ab5ff0d6aae921c847e9c4efb62b8411666d3175c65bde80e4b6ac7cea5e787",
+        "archive_member": "JSON/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.json",
+        "zip_crc32": "dd5c5dc9",
+        "bytes": 100232
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.png",
+        "sha256": "f5ba0eb6d4e56faefb4082499f49898dc2894a89803fe76ab8a7e85a383e1a6d",
+        "archive_member": "PNG/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.png",
+        "zip_crc32": "8617aa8d",
+        "bytes": 558717
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.pdf",
+    "sha256": "17f6a4d896e4e9e44103feb820ee93fc0062317fdcc7fb27a4a00d3f0fc1f7c6",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/bb1aa89ca15b657df1b5ef56e7c4e4971cab18e15d6db4f25b1dedf9545e79e8.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "scientific_articles",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:NYSE_COF_2002.pdf",
+    "original_page": 48,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.pdf",
+        "sha256": "5270fd9db7c6e5d56d098b247af67ba0e8b624869e50b9161cb3116ef93c0476",
+        "archive_member": "PDF/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.pdf",
+        "zip_crc32": "e0dd700f",
+        "bytes": 25890
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.json",
+        "sha256": "c514393d9c699a832f3e90f336c858fb3ca1f1c879e8790e73df54578b3af600",
+        "archive_member": "JSON/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.json",
+        "zip_crc32": "310a8157",
+        "bytes": 8292
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.png",
+        "sha256": "94016cbb825414e968bf4955070696875a482e56fcf09b42230b63971c9eb457",
+        "archive_member": "PNG/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.png",
+        "zip_crc32": "41f2ec23",
+        "bytes": 179710
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.pdf",
+    "sha256": "5270fd9db7c6e5d56d098b247af67ba0e8b624869e50b9161cb3116ef93c0476",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/992d2c81a9ebf9a58875857b2d0ec296c771e010c584f3c5f354eae9cedfa871.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:EN-c4f_annexiitechspeciiitechoffer_en.pdf",
+    "original_page": 45,
+    "category": "government_tenders",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.pdf",
+        "sha256": "7745664780567e9efaaafa6ff823e08c064d7392171e78a5bd2bf18b6b914c52",
+        "archive_member": "PDF/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.pdf",
+        "zip_crc32": "9febb812",
+        "bytes": 125128
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.json",
+        "sha256": "46ca5496a32c09efd48145c4b10d156cfd1937b7a271a8e88022280a1fdf562d",
+        "archive_member": "JSON/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.json",
+        "zip_crc32": "b0b5f1c7",
+        "bytes": 12281
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.png",
+        "sha256": "960bc172533b662cfb5a437a7eb23df22b018082960c53805778dc02c6e6e641",
+        "archive_member": "PNG/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.png",
+        "zip_crc32": "4d1f1515",
+        "bytes": 68423
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.pdf",
+    "sha256": "7745664780567e9efaaafa6ff823e08c064d7392171e78a5bd2bf18b6b914c52",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/cb21b5c559236cde3d832cac278e34153c4732314e59cd47f2f63bea00362c50.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "government_tenders",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:19161231-Act-2657.pdf",
+    "original_page": 482,
+    "category": "laws_and_regulations",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.pdf",
+        "sha256": "05bb15a611c28a4e8ee63b9a3ce2fcd23ddce49b7ba404b7e3aedbce2895a3f7",
+        "archive_member": "PDF/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.pdf",
+        "zip_crc32": "8fb9d6c3",
+        "bytes": 12203
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.json",
+        "sha256": "1e8ffd6959736607daa9acb9a98ea53bf4cb37c2aa5c007c36c54e66182f3503",
+        "archive_member": "JSON/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.json",
+        "zip_crc32": "5c437809",
+        "bytes": 27744
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.png",
+        "sha256": "bede6810f1f4d3b2c3a594a9c6c4e4525524205582aba1d2f7271a1ae98ac4b5",
+        "archive_member": "PNG/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.png",
+        "zip_crc32": "8bee264c",
+        "bytes": 367817
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.pdf",
+    "sha256": "05bb15a611c28a4e8ee63b9a3ce2fcd23ddce49b7ba404b7e3aedbce2895a3f7",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/7f9785340e9726be8fbe9c3ed6c2e6294fe851350ccd66239e98eb67e6a60641.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "laws_and_regulations",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:python_using.pdf",
+    "original_page": 65,
+    "category": "manuals",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.pdf",
+        "sha256": "beab7cbf4574d4809a9e61a358ce58d956671ec7093c88deb6c04059e90ecb45",
+        "archive_member": "PDF/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.pdf",
+        "zip_crc32": "99f4c42f",
+        "bytes": 27543
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.json",
+        "sha256": "1a29ad0664458feedca2cd36a84e3dbd1fb645eeb90a4f5e2a3b27aa3936a7ca",
+        "archive_member": "JSON/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.json",
+        "zip_crc32": "a96c1c96",
+        "bytes": 18669
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.png",
+        "sha256": "907731d6172edb4dc8f4584b660ebc2861fd0ae49e35de5c60c70b1e3e99d4f4",
+        "archive_member": "PNG/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.png",
+        "zip_crc32": "e8847fb5",
+        "bytes": 286362
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.pdf",
+    "sha256": "beab7cbf4574d4809a9e61a358ce58d956671ec7093c88deb6c04059e90ecb45",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/66b1911ed638ccd11f4432d51839939b5b9fd7cca31c309788f7fec7d8cd7d16.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "manuals",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:9557643_AdobeOCR.pdf",
+    "original_page": 74,
+    "category": "patents",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.pdf",
+        "sha256": "9c2ed83a61d1037c2a7b2619d5f8442a53eea81e8c6b02dfafbe0abf944431c7",
+        "archive_member": "PDF/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.pdf",
+        "zip_crc32": "4c31ac8c",
+        "bytes": 18633
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.json",
+        "sha256": "9d4799c4651f1e240f0b5e3a39f7a08265c17e812315c315eec58cc95ae8066f",
+        "archive_member": "JSON/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.json",
+        "zip_crc32": "9b18b1a4",
+        "bytes": 14734
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.png",
+        "sha256": "3875f95a07212411c2f2c8bce57f82c035f98e67daebf7454212679637e8eefc",
+        "archive_member": "PNG/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.png",
+        "zip_crc32": "03c09928",
+        "bytes": 151625
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.pdf",
+    "sha256": "9c2ed83a61d1037c2a7b2619d5f8442a53eea81e8c6b02dfafbe0abf944431c7",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/c7a2ef74abef1eaa445b33a9c5bcea37e6659bf7837a40542feb6c333328f883.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "patents",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:1001.2029.pdf",
+    "original_page": 1,
+    "category": "scientific_articles",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.pdf",
+        "sha256": "6612188b5942f2f32f09acb89727ce6e1c42d04c0b088f34648897eca574bd74",
+        "archive_member": "PDF/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.pdf",
+        "zip_crc32": "31ccf6e4",
+        "bytes": 149328
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.json",
+        "sha256": "e136666c7ed4c040b7cf60687a18111d26b3ea6b3cea5e56472cafd02646e8b7",
+        "archive_member": "JSON/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.json",
+        "zip_crc32": "0df81034",
+        "bytes": 136224
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.png",
+        "sha256": "1c84fd0cde99c555c284cd9c4acb4eef08c7ae5a6e010aa7c5d2c28b46f12af1",
+        "archive_member": "PNG/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.png",
+        "zip_crc32": "fedfd603",
+        "bytes": 651953
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.pdf",
+    "sha256": "6612188b5942f2f32f09acb89727ce6e1c42d04c0b088f34648897eca574bd74",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/6fcfaf4ad4629226fb9f854bfd3034dc16ad2fc981573e671b86b60b95ae6dcd.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "scientific_articles",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:NYSE_VNO_2003.pdf",
+    "original_page": 53,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.pdf",
+        "sha256": "aea9246e9c480f445137e5289d6302cf023e89d5e988964d0973f7682d2a1727",
+        "archive_member": "PDF/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.pdf",
+        "zip_crc32": "18a5b954",
+        "bytes": 27445
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.json",
+        "sha256": "5c3b399a47d093f4f8312ae581a0a95b8b04327fa74943973cc089a5b8f88f80",
+        "archive_member": "JSON/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.json",
+        "zip_crc32": "8f6f0163",
+        "bytes": 89681
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.png",
+        "sha256": "516a356cadd7c3c4d8f20424ff7011d5a76b315b338b0ebaa4f1d9e23dab6068",
+        "archive_member": "PNG/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.png",
+        "zip_crc32": "83981546",
+        "bytes": 376140
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.pdf",
+    "sha256": "aea9246e9c480f445137e5289d6302cf023e89d5e988964d0973f7682d2a1727",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/ba54fc6c20dd681db95ffeac62da4d2c193c3d07f5f6ae02800430dfa749fe19.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:EN-Annex II -Financial proposal_ID12924.pdf",
+    "original_page": 13,
+    "category": "government_tenders",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.pdf",
+        "sha256": "e8782fa591f3c2fbcdb4b13367fb2c93bc8cd1b15307048ad6a2f8518ec47104",
+        "archive_member": "PDF/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.pdf",
+        "zip_crc32": "b05429c8",
+        "bytes": 201095
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.json",
+        "sha256": "59e9b60faa4e7ead9be9f410ec4a769b5679fd47791adac599f14b9ae1e2a78b",
+        "archive_member": "JSON/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.json",
+        "zip_crc32": "01055b4a",
+        "bytes": 41292
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.png",
+        "sha256": "1880a5ead3cd191124bd3fed95ce379efa955d10642e8cd04ebf0d07db1e0896",
+        "archive_member": "PNG/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.png",
+        "zip_crc32": "5e65feda",
+        "bytes": 294432
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.pdf",
+    "sha256": "e8782fa591f3c2fbcdb4b13367fb2c93bc8cd1b15307048ad6a2f8518ec47104",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/909c294f5c209b9550d557e616b7a865044bc82801714b45a27b7c4c939f5bed.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "government_tenders",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "development",
+    "upstream_split": "train",
+    "group_id": "doclaynet-parent:s55Bc002600802je6.0_h30C332.pdf",
+    "original_page": 42,
+    "category": "laws_and_regulations",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.pdf",
+        "sha256": "f51a9fa0e91f20f84160f269d90dd8f6dfa9c00be99a98c26ed5f9b2f2deb423",
+        "archive_member": "PDF/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.pdf",
+        "zip_crc32": "daffef79",
+        "bytes": 296837
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.json",
+        "sha256": "42b14e87ba1281cdf1935812fec6f268e05f226ab47442eae4f60d2aec122dda",
+        "archive_member": "JSON/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.json",
+        "zip_crc32": "4cda3b93",
+        "bytes": 21534
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.png",
+        "sha256": "b40a04a66f3d15a4fab5899ffe9d02003d7b50f6bbbaccdd4a7d636fbe6739b8",
+        "archive_member": "PNG/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.png",
+        "zip_crc32": "c1a0a6ef",
+        "bytes": 455925
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.pdf",
+    "sha256": "f51a9fa0e91f20f84160f269d90dd8f6dfa9c00be99a98c26ed5f9b2f2deb423",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/b8f752e8d4943a00ba7a21fa270be19d06a82786091503e8683ae982dc849f9c.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "laws_and_regulations",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:NYSE_JWN_2003.pdf",
+    "original_page": 29,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.pdf",
+        "sha256": "bb2a37bf93b59d890659f9a6c29d8f2b690036b4a2256e992dad5d5b38d399d4",
+        "archive_member": "PDF/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.pdf",
+        "zip_crc32": "22828f30",
+        "bytes": 40673
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.json",
+        "sha256": "1cbb17008f32e2aa561b854f3fd55e08b4151ea746594980dae538138fe0b534",
+        "archive_member": "JSON/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.json",
+        "zip_crc32": "640cd16e",
+        "bytes": 83222
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.png",
+        "sha256": "60a71887b644e8dcd051b6b26f4c58654ecd087faf98ce5282ab08ff93ee5233",
+        "archive_member": "PNG/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.png",
+        "zip_crc32": "0e66cd00",
+        "bytes": 255731
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.pdf",
+    "sha256": "bb2a37bf93b59d890659f9a6c29d8f2b690036b4a2256e992dad5d5b38d399d4",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/b1ed3d6c989df88d37cb45f6d2ae80735406ef2cf4a5b971d6d6370c0c6ae1cb.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:EN-draft-contrat-supply-electrolysis-0763.pdf",
+    "original_page": 12,
+    "category": "government_tenders",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.pdf",
+        "sha256": "b1cd5950fc4cc115103eed1ecf637363bea2b162a9b0a690d125a1a8ec3b16dd",
+        "archive_member": "PDF/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.pdf",
+        "zip_crc32": "974c7315",
+        "bytes": 317185
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.json",
+        "sha256": "8f732f7e90877b9ba89b0563f8a979992345876353756fd31ac13b9ac69f87d2",
+        "archive_member": "JSON/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.json",
+        "zip_crc32": "32a83a2e",
+        "bytes": 44794
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.png",
+        "sha256": "5af07bfaf34f2152ec3f5b2694e3606fa719c90d6e359f80bfd47e2704c1f049",
+        "archive_member": "PNG/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.png",
+        "zip_crc32": "13746e03",
+        "bytes": 515677
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.pdf",
+    "sha256": "b1cd5950fc4cc115103eed1ecf637363bea2b162a9b0a690d125a1a8ec3b16dd",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/97eeaf54c762a91665ea2ef2c8e682b3c347a1e3bf655bbd6cc0b492ee1e8caa.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "government_tenders",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:20130815-RA-10607-BSA.pdf",
+    "original_page": 2,
+    "category": "laws_and_regulations",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.pdf",
+        "sha256": "39499e9366af738b0af031151cbb5abbceedaeb1875b0e2510c3f110a1fc6bc8",
+        "archive_member": "PDF/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.pdf",
+        "zip_crc32": "a00c7561",
+        "bytes": 71773
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.json",
+        "sha256": "3f224fa83470ca36fb15f1c88bcfb3b27db0a7192a3aed848c64a664dff2f1d4",
+        "archive_member": "JSON/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.json",
+        "zip_crc32": "8d489d26",
+        "bytes": 45803
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.png",
+        "sha256": "f9c3d6cb2e1b7536936e417eebc428ec0acf2820103fdaa461d66d25931651a9",
+        "archive_member": "PNG/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.png",
+        "zip_crc32": "68cd0262",
+        "bytes": 525438
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.pdf",
+    "sha256": "39499e9366af738b0af031151cbb5abbceedaeb1875b0e2510c3f110a1fc6bc8",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/2a05e96676dbbcbf2be7306848e664cb371f5bd33bea13c135b092460d6b6f96.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "laws_and_regulations",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:perl-all-en-5.8.5.pdf",
+    "original_page": 1370,
+    "category": "manuals",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.pdf",
+        "sha256": "97e5492c343e002162fc48cfc35e56732fb89120e05961a75f072ee902d46b25",
+        "archive_member": "PDF/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.pdf",
+        "zip_crc32": "6e1d6153",
+        "bytes": 48297
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.json",
+        "sha256": "827fbce2c25fafddddbffd36b5450e0830082ab754c46f3efd519034368d5e29",
+        "archive_member": "JSON/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.json",
+        "zip_crc32": "b9c698a9",
+        "bytes": 31961
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.png",
+        "sha256": "c817ef2be1476335b20063eb771e96684be36e656eea960b9c132e748d4b4357",
+        "archive_member": "PNG/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.png",
+        "zip_crc32": "6d84e203",
+        "bytes": 370046
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.pdf",
+    "sha256": "97e5492c343e002162fc48cfc35e56732fb89120e05961a75f072ee902d46b25",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/9f28bda2e72a4bac52e369f6d2500250983f380cc739c89f4802a233a2ed2fa8.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "manuals",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:KR100680001B1.pdf",
+    "original_page": 12,
+    "category": "patents",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.pdf",
+        "sha256": "7d241d914f867894ea1a85ed3f90d500c5be24f403904abb9b43054b392138cf",
+        "archive_member": "PDF/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.pdf",
+        "zip_crc32": "531b4957",
+        "bytes": 231151
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.json",
+        "sha256": "53c1dca4e306b7b7a91c1e5b1e0bb52153ba6ac7c3d28b0df4c1205a9090ca68",
+        "archive_member": "JSON/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.json",
+        "zip_crc32": "d853536c",
+        "bytes": 3097
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.png",
+        "sha256": "41af864b344f7d2ae31adf6f985d0928833bd288202388ae5a50112e6d6891d0",
+        "archive_member": "PNG/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.png",
+        "zip_crc32": "ed3f0efb",
+        "bytes": 188721
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.pdf",
+    "sha256": "7d241d914f867894ea1a85ed3f90d500c5be24f403904abb9b43054b392138cf",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/4caba41d37f41e6b118999b38ec79bd426ccccff28b767d0c2f885d07b02f7b4.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "patents",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:1002.0846.pdf",
+    "original_page": 10,
+    "category": "scientific_articles",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.pdf",
+        "sha256": "fbf6f905f7dcba43a77086aabff8ed7bedcb13d9e924fcf46d676f26689da567",
+        "archive_member": "PDF/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.pdf",
+        "zip_crc32": "e74c6cfd",
+        "bytes": 41348
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.json",
+        "sha256": "828772daaa43b02ec8b4bfe3e526a21e3f7f343ef3a8fc5674b4f5fec6a354b7",
+        "archive_member": "JSON/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.json",
+        "zip_crc32": "66ce8a25",
+        "bytes": 147016
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.png",
+        "sha256": "20458737fd553cae63d7df54daa44e37c757c97f0218e33a5e05fc52afea8565",
+        "archive_member": "PNG/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.png",
+        "zip_crc32": "4ed56b6c",
+        "bytes": 182487
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.pdf",
+    "sha256": "fbf6f905f7dcba43a77086aabff8ed7bedcb13d9e924fcf46d676f26689da567",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/f32d0078fb1e1246d08511af296e5c5c574f0635753ebc186198e5a05c09fcc4.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "scientific_articles",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "calibration",
+    "upstream_split": "val",
+    "group_id": "doclaynet-parent:TSX_Y_2012.pdf",
+    "original_page": 75,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.pdf",
+        "sha256": "fdf7f45db47160c868fc741cd03fd51096686ee484aa814403a508f1b70c8934",
+        "archive_member": "PDF/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.pdf",
+        "zip_crc32": "8b85af1b",
+        "bytes": 46116
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.json",
+        "sha256": "8f369d96b945138237fd83c66d82cf7c233abf8853d7f1b6c9e907caff3e72da",
+        "archive_member": "JSON/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.json",
+        "zip_crc32": "ba9980e4",
+        "bytes": 62529
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.png",
+        "sha256": "4a22dea775a40c4552992f4de69ffff19afc631217b582a5cc32b1c4eeeb1b07",
+        "archive_member": "PNG/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.png",
+        "zip_crc32": "5031e5de",
+        "bytes": 443109
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.pdf",
+    "sha256": "fdf7f45db47160c868fc741cd03fd51096686ee484aa814403a508f1b70c8934",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/aae1d540b914501e607c842f48e42e43544ffafb4815f5ab924fbe650ae1b99a.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:ASX_STO_2004.pdf",
+    "original_page": 72,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.pdf",
+        "sha256": "5284eaedf6290ca180da8892cdd84ff35cf9b709bf2c568f8ec56ef4b59afc05",
+        "archive_member": "PDF/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.pdf",
+        "zip_crc32": "8b28c942",
+        "bytes": 54686
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.json",
+        "sha256": "5ef5d849e6f6fe23b787adb2e53f9c5e08d685665eeb1c264808a14b7a8a7760",
+        "archive_member": "JSON/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.json",
+        "zip_crc32": "d37218e9",
+        "bytes": 46961
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.png",
+        "sha256": "b8c70285a13a6f92ed9fda9046d42e0aeb0407faeedb3e971a0ccd035569000e",
+        "archive_member": "PNG/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.png",
+        "zip_crc32": "9ea97113",
+        "bytes": 215046
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.pdf",
+    "sha256": "5284eaedf6290ca180da8892cdd84ff35cf9b709bf2c568f8ec56ef4b59afc05",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/99908d0419d9000658f35d77ec11a871c45e57740518cde1b608686f2587fb71.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:FR-Projet de contrat-cadre 18-05-21.pdf",
+    "original_page": 32,
+    "category": "government_tenders",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.pdf",
+        "sha256": "0ce3ac23937a22fdf9b8f1f8977a848175d2437d9eb909d6fedf383ca1133e1e",
+        "archive_member": "PDF/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.pdf",
+        "zip_crc32": "f87e66ae",
+        "bytes": 172027
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.json",
+        "sha256": "ba7decbce52a8c0d5a99be6f4b9a842bdd94f1b2313cf0299b6cb88603fab96a",
+        "archive_member": "JSON/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.json",
+        "zip_crc32": "687c8d6d",
+        "bytes": 27821
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.png",
+        "sha256": "8e685929a954fa51d4e7c03eae2adcb70913d31df604ed52b641918293c6a90a",
+        "archive_member": "PNG/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.png",
+        "zip_crc32": "2618791a",
+        "bytes": 579256
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.pdf",
+    "sha256": "0ce3ac23937a22fdf9b8f1f8977a848175d2437d9eb909d6fedf383ca1133e1e",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/904b2eb7f637e02343986069b27b52d7691c74087d8993b579643d33bf88cbc4.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "government_tenders",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:00-80T-80.pdf",
+    "original_page": 77,
+    "category": "laws_and_regulations",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.pdf",
+        "sha256": "5ace543debbc12c1e0eaa68d86b4085551b248ae1f3437bd5d770f9bd40dee5a",
+        "archive_member": "PDF/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.pdf",
+        "zip_crc32": "3cd2af3a",
+        "bytes": 17233
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.json",
+        "sha256": "6c2f792879e2d62141f2818ea5ebf6191c3263e27813d7363aa9c41bf078da20",
+        "archive_member": "JSON/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.json",
+        "zip_crc32": "71f3138b",
+        "bytes": 10522
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.png",
+        "sha256": "b9c5bbc7769ceaff01506ed88760978933c4d39ae31eaf428b2ac989b06188cc",
+        "archive_member": "PNG/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.png",
+        "zip_crc32": "efe74147",
+        "bytes": 119196
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.pdf",
+    "sha256": "5ace543debbc12c1e0eaa68d86b4085551b248ae1f3437bd5d770f9bd40dee5a",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/2616a4734224e864b8f7b56e57125b073c02e633cdbcec312798aa763072344c.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "laws_and_regulations",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:IBM-i-s5445349.pdf",
+    "original_page": 197,
+    "category": "manuals",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.pdf",
+        "sha256": "e9209b52969503ca4a9f9a51ec80b725d24c66ebe4e6a08bfab547b3d5abe2a4",
+        "archive_member": "PDF/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.pdf",
+        "zip_crc32": "26f5f3ef",
+        "bytes": 12226
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.json",
+        "sha256": "bb1d271cf926064ebef701c40361bbb6e93a768009583b3da7b96b1885dfb5cd",
+        "archive_member": "JSON/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.json",
+        "zip_crc32": "a42ad213",
+        "bytes": 29395
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.png",
+        "sha256": "ac0c12a44bc4cd77a192a9d8b0ba50e2111124e9aeb5c26ed5316824c3bc2b41",
+        "archive_member": "PNG/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.png",
+        "zip_crc32": "886abf3a",
+        "bytes": 118048
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.pdf",
+    "sha256": "e9209b52969503ca4a9f9a51ec80b725d24c66ebe4e6a08bfab547b3d5abe2a4",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/b0e42e073487f4c7151566469890327587c048352026f7af1ba941c4dfb2d94c.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "manuals",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:9164380_AdobeOCR.pdf",
+    "original_page": 30,
+    "category": "patents",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.pdf",
+        "sha256": "489e9ae7feb2b385313386cb32d01a02ce709c98bb42867c3298a64e4927f317",
+        "archive_member": "PDF/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.pdf",
+        "zip_crc32": "7847814b",
+        "bytes": 110757
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.json",
+        "sha256": "93e066174d6b9f0e70883cf0abe817e998b13485555d7fee2f8dede712cff9dc",
+        "archive_member": "JSON/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.json",
+        "zip_crc32": "0c0c1809",
+        "bytes": 52366
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.png",
+        "sha256": "135ee894f9331238eb8c27f3d3b0c5223153dbcdb24e1bee84302997a93ed3ac",
+        "archive_member": "PNG/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.png",
+        "zip_crc32": "e47f30b1",
+        "bytes": 680389
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.pdf",
+    "sha256": "489e9ae7feb2b385313386cb32d01a02ce709c98bb42867c3298a64e4927f317",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/cfe482d4e853cf9227e2df9743eacbda6b5748e5f7c01ecf10eb0042284105ad.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "patents",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:1001.4384.pdf",
+    "original_page": 7,
+    "category": "scientific_articles",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.pdf",
+        "sha256": "d0db4a5f0a26d93534bc93cd8491714a2fad2f5807b20faf493b8a1cfa7e6d50",
+        "archive_member": "PDF/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.pdf",
+        "zip_crc32": "5ca248e1",
+        "bytes": 33335
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.json",
+        "sha256": "bc65df0f5f8243a939044ce4c106a97cff655811d60c29ce5d6221ccbd9597cd",
+        "archive_member": "JSON/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.json",
+        "zip_crc32": "37eb0a46",
+        "bytes": 87537
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.png",
+        "sha256": "55fbbfde8fa0bfc79c1dd48ad57f94d6468c4dcdeaa8d525a5cbf9ecd740bb15",
+        "archive_member": "PNG/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.png",
+        "zip_crc32": "8a1a76fe",
+        "bytes": 205316
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.pdf",
+    "sha256": "d0db4a5f0a26d93534bc93cd8491714a2fad2f5807b20faf493b8a1cfa7e6d50",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/4c260c9b4c5c6fc09bbda28563e04994152b864350825313b1cb4a34d05a96ad.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "scientific_articles",
+      "single_page",
+      "native_pdf"
+    ]
+  },
+  {
+    "case_id": "doclaynet-edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6",
+    "source": "doclaynet",
+    "format": "pdf",
+    "split": "holdout",
+    "upstream_split": "test",
+    "group_id": "doclaynet-parent:0000010795-19-000044_20191127x10k.pdf",
+    "original_page": 59,
+    "category": "financial_reports",
+    "source_url": "https://codait-cos-dax.s3.us.cloud-object-storage.appdomain.cloud/dax-doclaynet/1.0.0/DocLayNet_extra.zip",
+    "source_revision": "1.0.0",
+    "assets": {
+      "pdf": {
+        "path": "eval/downloads/corpus/doclaynet/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.pdf",
+        "sha256": "134e6963006e34b26deb309b8fe6b4381cfa997c4251345a3d4716f4cea821ac",
+        "archive_member": "PDF/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.pdf",
+        "zip_crc32": "9ba2041c",
+        "bytes": 51119
+      },
+      "json": {
+        "path": "eval/downloads/corpus/doclaynet/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.json",
+        "sha256": "39e008af9d6f44f7950a4cefd27aa4ac0f78df3565b8a427796b061d4af7d55f",
+        "archive_member": "JSON/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.json",
+        "zip_crc32": "34b2ea98",
+        "bytes": 18381
+      },
+      "png": {
+        "path": "eval/downloads/corpus/doclaynet/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.png",
+        "sha256": "dc5db205172314555cc7e284029c7a875f3b61db23617a014ef8a7be93f2a1e7",
+        "archive_member": "PNG/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.png",
+        "zip_crc32": "143aef61",
+        "bytes": 446330
+      }
+    },
+    "path": "eval/downloads/corpus/doclaynet/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.pdf",
+    "sha256": "134e6963006e34b26deb309b8fe6b4381cfa997c4251345a3d4716f4cea821ac",
+    "upstream_annotation": "eval/downloads/corpus/doclaynet/edd61485fd5d352af5e5b303eac0efa0b107c23f74765937673ad777be5599a6.layout.json",
+    "license": "CDLA-Permissive-1.0",
+    "license_url": "https://cdla.dev/permissive-1-0/",
+    "attribution": "DocLayNet, IBM Research / Auer et al.; dataset release 1.0.0.",
+    "rights_status": "dataset_license_checked; embedded_third_party_rights_review_pending",
+    "status": "downloaded",
+    "evaluation_ready": false,
+    "tags": [
+      "financial_reports",
+      "single_page",
+      "native_pdf"
+    ]
+  }
+]

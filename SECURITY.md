@@ -1,6 +1,7 @@
 # Security Policy
 
-**Status:** This repository currently contains planning documents, not a production-ready service.
+**Status:** This repository contains architecture documentation, local corpus preparation tools
+and project-owned synthetic fixtures. It is not a production-ready service.
 
 ## Secrets and sensitive data
 

@@ -1,8 +1,8 @@
-# Target-only configuration. No document assets or annotations are included.
+# Target quotas and preparation policy; actual files are listed in manifest.jsonl.
 # See docs/12-evaluation-corpus.md for the binding selection, licensing, and labeling rules.
 version: 1
 name: ai-idp-pilot-120
-status: planned
+status: files_acquired_annotation_review_pending
 created_date: "2026-10-17"
 target_document_count: 120
 estimated_document_units:
@@ -19,7 +19,7 @@ selection:
   preserve_upstream_splits: true
   enforce_source_document_grouping: true
   enforce_duplicate_and_template_grouping: true
-  case_statuses: [selected, licence_approved, downloaded, annotated, reviewed, evaluation_ready]
+  case_statuses: [selected, licence_approved, downloaded, generated, annotated, reviewed, evaluation_ready]
   require_sha256: true
   require_attribution: true
   require_human_review_of_field_ground_truth: true
@@ -30,7 +30,7 @@ sources:
     reference_license: CDLA-Permissive-1.0
     target_documents: 35
     split: {development: 21, calibration: 7, holdout: 7}
-    selection_status: planned
+    selection_status: downloaded
     special_requirements: [preserve_parent_document_id, create_field_ground_truth]
   - id: cord_v2
     description: Real scanned receipts with source labels.
@@ -38,7 +38,7 @@ sources:
     reference_license: CC-BY-4.0
     target_documents: 30
     split: {development: 18, calibration: 6, holdout: 6}
-    selection_status: planned
+    selection_status: downloaded
     special_requirements: [attribution, review_reference_to_schema_mapping]
   - id: gov_uk_pdf
     description: Authentic public-sector multi-page PDFs.
@@ -46,7 +46,7 @@ sources:
     reference_license: OGL-3.0-where-applicable
     target_documents: 20
     split: {development: 12, calibration: 4, holdout: 4}
-    selection_status: planned
+    selection_status: downloaded
     special_requirements: [check_file_specific_rights, annotate_full_document_evidence]
   - id: gov_uk_docx
     description: Authentic public-sector Word documents and forms.
@@ -54,7 +54,7 @@ sources:
     reference_license: OGL-3.0-where-applicable
     target_documents: 15
     split: {development: 9, calibration: 3, holdout: 3}
-    selection_status: planned
+    selection_status: downloaded
     special_requirements: [check_file_specific_rights, annotate_semantic_block_ids]
   - id: synthetic
     description: Project-owned realistic stress documents with generated and reviewed answers.
@@ -62,7 +62,7 @@ sources:
     reference_license: Apache-2.0
     target_documents: 20
     split: {development: 12, calibration: 4, holdout: 4}
-    selection_status: planned
+    selection_status: generated
     special_requirements: [no_real_personal_data, annotate_source_units, distinct_generation_templates_by_split]
 evaluation:
   smoke_sample_target: [20, 30]

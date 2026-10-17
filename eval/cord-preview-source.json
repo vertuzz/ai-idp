@@ -1,0 +1,16 @@
+{
+  "dataset": "naver-clova-ix/cord-v2",
+  "revision": "7f0115a4b758a71d6473b8d085751692da2fef98",
+  "upstream_split": "train",
+  "shard": "data/train-00000-of-00004-b4aaeceff1d90ecb.parquet",
+  "shard_bytes": 490224630,
+  "shard_sha256": "da3994eee1bf9bd3c57f0d53a72c3a6812c8696c5ba26245987949ddf73483cc",
+  "row_indices": [0, 11, 42, 103, 171],
+  "selection_note": "Exploratory samples from one train shard; not representative, split-frozen, or evaluation-ready.",
+  "license": "CC-BY-4.0",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "license_source": "https://github.com/clovaai/cord/blob/master/LICENSE-CC-BY",
+  "attribution": "CORD: A Consolidated Receipt Dataset for Post-OCR Parsing, NAVER CLOVA / CORD authors. Source: https://github.com/clovaai/cord and https://huggingface.co/datasets/naver-clova-ix/cord-v2. CC BY 4.0. Original image bytes and upstream labels are preserved; a local inventory is added.",
+  "reviewed_on": "2026-10-17",
+  "rights_status": "upstream_dataset_license_checked; per_asset_privacy_and_third_party_review_pending"
+}

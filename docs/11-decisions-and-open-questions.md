@@ -22,6 +22,12 @@
 
 **ADR-010 — Fixed initial 120-document evaluation corpus.** Before substantial application implementation, prepare a documented, licence-reviewed, human-annotated corpus comprising 35 DocLayNet PDF pages, 30 CORD v2 receipts, 20 UK government PDFs, 15 UK government DOCX files, and 20 synthetic stress documents. Freeze 72 development, 24 calibration and 24 holdout cases using grouped, nonleaking splits. Track source licences separately from Apache-2.0 code licensing. See [the corpus specification](12-evaluation-corpus.md).
 
+**ADR-011 — Portable Python development.** Development currently takes place on Windows;
+the supported target platforms are Windows, Linux and macOS. Use Python 3.13, uv-managed
+environments, `uv run` entry points, `pathlib`, and a committed cross-platform dependency
+lock. Avoid shell-specific activation and OS-specific runtime assumptions. Initial bootstrap
+verification is on Windows; Linux/macOS verification remains pending.
+
 ## Open questions for implementation experiments
 
 1. Which JSON Schema constructs are reliably supported by the chosen generative model and Pydantic AI pipeline (especially nested arrays, union types and $ref)?

@@ -1,0 +1,48 @@
+{
+  "file_integrity_passed": true,
+  "errors": [],
+  "documents": 120,
+  "sources": {
+    "cord_v2": 30,
+    "doclaynet": 35,
+    "gov_uk_docx": 15,
+    "gov_uk_pdf": 20,
+    "synthetic": 20
+  },
+  "splits": {
+    "calibration": 24,
+    "development": 72,
+    "holdout": 24
+  },
+  "formats": {
+    "png": 30,
+    "pdf": 70,
+    "docx": 20
+  },
+  "primary_bytes_by_source": {
+    "cord_v2": 57511616,
+    "doclaynet": 3148449,
+    "gov_uk_docx": 3124839,
+    "gov_uk_pdf": 11396321,
+    "synthetic": 1522686
+  },
+  "source_units_by_source": {
+    "cord_v2": 30,
+    "doclaynet": 35,
+    "gov_uk_docx": 2550,
+    "gov_uk_pdf": 551,
+    "synthetic": 90
+  },
+  "unit_note": "PDF pages, image frames, and DOCX top-level XML body elements; DOCX elements are not physical pages or finalized ingestion blocks.",
+  "annotation_status": {
+    "draft": 50,
+    "not_annotated": 70
+  },
+  "evaluation_ready": 0,
+  "remaining_reviews": [
+    "Human field/evidence annotation review",
+    "File-specific rights and privacy review",
+    "Visual/template near-duplicate adjudication beyond recorded groups"
+  ],
+  "selection_status": "candidate_v1_files_complete; final_benchmark_freeze_pending_reviews"
+}

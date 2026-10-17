@@ -1,0 +1,13 @@
+* text=auto eol=lf
+
+# Preserve fixture checksums across Windows, Linux and macOS checkouts.
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.tiff binary
+*.webp binary
+*.zip binary
+*.parquet binary

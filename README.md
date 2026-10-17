@@ -4,9 +4,29 @@ AI-IDP is an open-source, general-purpose Intelligent Document Processing (IDP) 
 
 The project begins as a self-hosted HTTP API and may later evolve into a production service or SaaS product. It is **not specific to any industry, employer, or proprietary document workflow**.
 
-**Status:** Architecture and implementation specification (MVP). No application code is included yet.
+**Status:** All 120 candidate corpus files are acquired, with provenance, checksums and draft 72/24/24 splits. Fifty cases have draft answer keys; 70 await field annotation. Human review and final benchmark freeze are pending. The API and model pipeline are not implemented.
 
 **License:** [Apache License 2.0](LICENSE). Contributions and dependencies must be compatible with permissive open-source distribution.
+
+## Local start
+
+Development currently takes place on Windows; the project targets Windows, Linux and macOS.
+Install uv, then run from the repository root (no shell-specific activation is needed):
+
+~~~text
+uv sync --locked
+uv run python --version
+uv run python -m pytest -q
+uv run ruff check .
+uv run --group evaluation python -m scripts.prepare_corpus
+uv run --group evaluation python -m scripts.validate_corpus
+~~~
+
+Python 3.13 is selected through `.python-version`. The optional evaluation group provides
+dataset preparation and integrity tools; application dependencies will be added with their
+implementation. Original external files remain in ignored `eval/downloads/`. The corpus
+contains 70 PDFs, 20 DOCX files and 30 receipt PNGs; counterpart images do not count again.
+See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md).
 
 ## Core ideas
 
@@ -24,7 +44,7 @@ The project begins as a self-hosted HTTP API and may later evolve into a product
 - PyMuPDF for PDF text, metadata, and page rendering; Mammoth for lightweight DOCX-to-semantic-HTML extraction; native support for image inputs.
 - PostgreSQL for jobs, checkpoints, evaluations, and a leasing queue; local filesystem for original files and derived artifacts.
 - OpenTelemetry for spans and metrics, exported to local JSONL initially.
-- pytest and reproducible, labeled real-model evaluation runs. The initial **planned 120-document corpus** combines DocLayNet (35), CORD v2 (30), UK government PDFs (20), UK government DOCX (15), and synthetic stress files (20); see [corpus plan](docs/12-evaluation-corpus.md).
+- pytest and reproducible, labeled real-model evaluation runs. The **120-file candidate corpus** is acquired: DocLayNet (35), CORD v2 (30), UK government PDFs (20), UK government DOCX (15), and synthetic stress files (20). Label review is pending; see [corpus status](eval/CORPUS.md) and [preparation policy](docs/12-evaluation-corpus.md).
 
 ## Scope
 
