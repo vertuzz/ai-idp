@@ -4,35 +4,40 @@ AI-IDP is an open-source, general-purpose Intelligent Document Processing (IDP) 
 
 The project begins as a self-hosted HTTP API and may later evolve into a production service or SaaS product. It is **not specific to any industry, employer, or proprietary document workflow**.
 
-**Status:** All 120 candidate corpus files are acquired, with provenance, checksums and draft 72/24/24 splits. Fifty cases have draft answer keys; 70 await field annotation. Human review and final benchmark freeze are pending. The API and model pipeline are not implemented.
+**Status:** The core hexagonal backend, FastAPI HTTP API (`/v1`), PostgreSQL leasing queue and worker, PyMuPDF/Mammoth/Pillow document normalizers, OpenRouter Decisions API (`POST /api/alpha/decisions`) and Pydantic AI extraction adapters, field-level verification/escalation, local OpenTelemetry JSONL exporter, and evaluation harness are implemented and verified. All 120 candidate corpus files are acquired, with provenance, checksums and draft 72/24/24 splits. Fifty cases have draft answer keys; 70 await field annotation. Human review and final benchmark freeze are pending.
 
 **License:** [Apache License 2.0](LICENSE). Contributions and dependencies must be compatible with permissive open-source distribution.
 
 ## Local start
 
 Development currently takes place on Windows; the project targets Windows, Linux and macOS.
-Install uv, then run from the repository root (no shell-specific activation is needed):
+Install uv, configure `.env` from `.env.example`, start PostgreSQL, apply migrations, and run tests or the API/worker from the repository root:
 
 ~~~text
-uv sync --locked
-uv run python --version
-uv run python -m pytest -q
-uv run ruff check .
+uv sync --locked --group dev --group evaluation
+docker compose up -d postgres
+uv run python -m alembic upgrade head
+uv run --group dev --group evaluation python -m pytest -q
+uv run python -m ruff check .
+~~~
+
+Start the HTTP API and background worker locally:
+
+~~~text
+uv run python -m uvicorn ai_idp.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
+uv run python -m ai_idp.workers.runner
+~~~
+
+Prepare/validate the 120-file evaluation corpus and run opt-in live model checks (requires `OPENROUTER_API_KEY` in `.env`):
+
+~~~text
 uv run --group evaluation python -m scripts.prepare_corpus
 uv run --group evaluation python -m scripts.validate_corpus
-~~~
-
-To run an opt-in live OpenRouter smoke check (requires `OPENROUTER_API_KEY` in `.env`):
-
-~~~text
 uv run --group evaluation python -m scripts.smoke_models
+uv run python -m ai_idp.evaluation.runner --case-id synthetic-native-01 --case-id synthetic-scan-01 --case-id synthetic-mixed-01 --case-id synthetic-docx-01 --case-id cord-v2-train-0000 --profile default --profile always_vision
 ~~~
 
-Python 3.13 is selected through `.python-version`. The optional evaluation group provides
-dataset preparation and integrity tools; application dependencies will be added with their
-implementation. Original external files remain in ignored `eval/downloads/`. The corpus
-contains 70 PDFs, 20 DOCX files and 30 receipt PNGs; counterpart images do not count again.
-See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md).
+Python 3.13 is selected through `.python-version`. Original external files remain in ignored `eval/downloads/`. The corpus contains 70 PDFs, 20 DOCX files and 30 receipt PNGs; counterpart images do not count again. See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md).
 
 ## Core ideas
 
@@ -45,11 +50,11 @@ See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md
 
 ## MVP stack
 
-- Python 3.13, uv, FastAPI, latest compatible stable Pydantic v2 and Pydantic AI (resolved and locked during implementation).
+- Python 3.13, uv, FastAPI, Pydantic v2 and Pydantic AI (`StructuredDict` + `OpenAIChatModel`).
 - OpenRouter for decision and generative model calls. Baseline configuration: `perplexity/pplx-decider-v1.2` for decisions, `anthropic/claude-haiku-5.5` for primary extraction, and `google/gemini-4-argon` for escalation; all model IDs remain independently configurable.
-- PyMuPDF for PDF text, metadata, and page rendering; Mammoth for lightweight DOCX-to-semantic-HTML extraction; native support for image inputs.
-- PostgreSQL for jobs, checkpoints, evaluations, and a leasing queue; local filesystem for original files and derived artifacts.
-- OpenTelemetry for spans and metrics, exported to local JSONL initially.
+- PyMuPDF for PDF text, metadata, and page rendering; Mammoth for lightweight DOCX-to-semantic-HTML extraction; Pillow for PNG, JPEG, and multi-frame TIFF inputs.
+- PostgreSQL for jobs, checkpoints, evaluations, and a `SKIP LOCKED` leasing queue; local filesystem for original files and derived artifacts.
+- OpenTelemetry SDK for spans and events, exported to rotating local JSONL (`telemetry/spans.jsonl`).
 - pytest and reproducible, labeled real-model evaluation runs. The **120-file candidate corpus** is acquired: DocLayNet (35), CORD v2 (30), UK government PDFs (20), UK government DOCX (15), and synthetic stress files (20). Label review is pending; see [corpus status](eval/CORPUS.md) and [preparation policy](docs/12-evaluation-corpus.md).
 
 ## Scope

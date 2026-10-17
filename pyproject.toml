@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "ai-idp"
 version = "0.1.0"
@@ -5,7 +9,25 @@ description = "Evaluation-first, AI-directed intelligent document processing"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 license = "Apache-2.0"
-dependencies = []
+dependencies = [
+    "alembic>=1.14",
+    "beautifulsoup4>=4.12",
+    "fastapi>=0.115",
+    "httpx>=0.28",
+    "jsonschema>=4.23",
+    "mammoth>=1.8",
+    "opentelemetry-api>=1.30",
+    "opentelemetry-sdk>=1.30",
+    "pillow==12.3.0",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.10",
+    "pydantic-ai-slim[openai]>=0.1",
+    "pydantic-settings>=2.7",
+    "pymupdf>=1.25",
+    "python-multipart>=0.0.20",
+    "sqlalchemy>=2.0",
+    "uvicorn[standard]>=0.34",
+]
 
 [dependency-groups]
 evaluation = [
@@ -18,7 +40,14 @@ evaluation = [
     "remotezip>=0.12.6",
     "reportlab==4.4.9",
 ]
-dev = ["pytest>=8", "ruff>=0.12"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.12",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_idp"]
 
 [tool.ruff]
 target-version = "py313"
@@ -27,6 +56,7 @@ extend-exclude = ["eval/cache", "eval/downloads"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

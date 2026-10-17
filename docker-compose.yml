@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: ai-idp-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ai_idp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_idp}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_idp}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ai_idp} -d ${POSTGRES_DB:-ai_idp}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-idp-api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ai_idp}:${POSTGRES_PASSWORD:-ai_idp}@postgres:5432/${POSTGRES_DB:-ai_idp}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./telemetry:/app/telemetry
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["uv", "run", "uvicorn", "ai_idp.adapters.inbound.http.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-idp-worker
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ai_idp}:${POSTGRES_PASSWORD:-ai_idp}@postgres:5432/${POSTGRES_DB:-ai_idp}
+    volumes:
+      - ./data:/app/data
+      - ./telemetry:/app/telemetry
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["uv", "run", "python", "-m", "ai_idp.workers.runner"]
+
+volumes:
+  postgres_data:

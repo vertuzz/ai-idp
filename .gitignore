@@ -20,11 +20,11 @@ build/
 *.p12
 
 # Local documents, evaluations, and telemetry
-data/
-uploads/
-artifacts/
-telemetry/
-eval-results/
+/data/
+/uploads/
+/artifacts/
+/telemetry/
+/eval-results/
 *.jsonl
 !eval/manifest.jsonl
 *.sqlite3
