@@ -43,7 +43,7 @@ A multimodal LLM can still be used for text-only extraction by providing text an
 
 ## Decision API contract
 
-Use OpenRouter Decisions API through a dedicated httpx adapter, with typed Pydantic request and response validation. Keep provider-specific question types (for example, noul/choice/score) out of the domain interfaces; normalize to typed probability decisions.
+Use OpenRouter Decisions API (`POST /api/alpha/decisions`) through a dedicated httpx adapter, with typed Pydantic request and response validation. Keep provider-specific question types (`noul`, `choice`, `score` with explicit `criteria`) out of the domain interfaces; normalize to typed probability decisions.
 
 A model may accept multiple named questions about one state, but batching can change accuracy. Benchmark one question per call versus grouped field questions, especially for the smaller Flash variant.
 
@@ -59,6 +59,6 @@ Persist: model ID, provider API version, question set/version, state artifact ID
 
 ## Initial candidates
 
-Primary decision-model candidate: Perplexity Decider V1.2 via OpenRouter. Comparison candidates may include its Flash variant and other compatible decision models (Jev, Liquid or future models) after checking API availability and capabilities.
+Primary decision-model baseline: `perplexity/pplx-decider-v1.2` via OpenRouter (verified with multimodal text+image state and batched `noul`/`choice` questions). Comparison candidates may include `perplexity/pplx-decider-flash-v1.2` and other compatible decision models (`typesafe/jev-1.14`, `liquid/d1-ultra`, `openai/gpt-6-luna-decisions` or future models) after checking API availability and capabilities.
 
 Treat availability, licensing, image support, context limits and pricing as time-varying configuration facts; measure instead of assuming benchmark superiority.

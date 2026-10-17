@@ -2,7 +2,7 @@
 
 ## Extraction
 
-The caller submits a JSON Schema. Normalize it to named target fields or paths (including nested objects and arrays), descriptions, types and optional semantics. The extraction adapter invokes a configurable OpenRouter generative model via Pydantic AI.
+The caller submits a JSON Schema. Normalize it to named target fields or paths (including nested objects and arrays), descriptions, types and optional semantics. The extraction adapter invokes a configurable OpenRouter generative model via Pydantic AI (default primary baseline: `anthropic/claude-haiku-5.5`).
 
 - Group related fields and candidate units to retain context (such as tables spanning pages).
 - Use selected TEXT, VISION or TEXT_AND_VISION inputs.
@@ -24,7 +24,7 @@ Example internal field candidate:
       "quote": "Annual revenue: 1,250,000"
     }
   ],
-  "extraction_model": "configured-model-id",
+  "extraction_model": "anthropic/claude-haiku-5.5",
   "attempt": 1
 }
 ~~~
@@ -50,7 +50,7 @@ Do not conflate a missing field with a hallucination. Missing, contradicted, and
 1. Extract initial field candidates using selected modality and candidate units.
 2. Verify each populated candidate independently.
 3. If unsupported/uncertain, retry the **specific field** with original source and richer modality or neighboring context.
-4. If needed, use a configurable stronger extraction model; re-verify the replacement value.
+4. If needed, use a configurable stronger extraction model (default escalation baseline: `google/gemini-4-argon`); re-verify the replacement value.
 5. For fields still missing, run coverage review over previously unselected/low-score units and attempt relevant extraction.
 6. After bounded retries, return UNRESOLVED with reason and evidence trail; never silently promote uncertainty to success.
 

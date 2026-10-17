@@ -22,6 +22,12 @@ uv run --group evaluation python -m scripts.prepare_corpus
 uv run --group evaluation python -m scripts.validate_corpus
 ~~~
 
+To run an opt-in live OpenRouter smoke check (requires `OPENROUTER_API_KEY` in `.env`):
+
+~~~text
+uv run --group evaluation python -m scripts.smoke_models
+~~~
+
 Python 3.13 is selected through `.python-version`. The optional evaluation group provides
 dataset preparation and integrity tools; application dependencies will be added with their
 implementation. Original external files remain in ignored `eval/downloads/`. The corpus
@@ -40,7 +46,7 @@ See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md
 ## MVP stack
 
 - Python 3.13, uv, FastAPI, latest compatible stable Pydantic v2 and Pydantic AI (resolved and locked during implementation).
-- OpenRouter for decision and generative model calls. Initial decision candidate: Perplexity Decider V1.2; extraction and escalation models are independently configurable.
+- OpenRouter for decision and generative model calls. Baseline configuration: `perplexity/pplx-decider-v1.2` for decisions, `anthropic/claude-haiku-5.5` for primary extraction, and `google/gemini-4-argon` for escalation; all model IDs remain independently configurable.
 - PyMuPDF for PDF text, metadata, and page rendering; Mammoth for lightweight DOCX-to-semantic-HTML extraction; native support for image inputs.
 - PostgreSQL for jobs, checkpoints, evaluations, and a leasing queue; local filesystem for original files and derived artifacts.
 - OpenTelemetry for spans and metrics, exported to local JSONL initially.

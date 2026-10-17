@@ -30,7 +30,7 @@ Separate single-page layout/extraction measurements from truly multi-page releva
 3. **Decision-led pipeline:** field relevance → modality selection → structured extraction.
 4. **Verification ablation:** rerun decision-led extraction with and without field verification.
 5. **Full recovery:** verification, missing-field coverage review and bounded escalation.
-6. **Model experiments:** Decider V1.2 vs Flash/compatible alternatives; cheap extraction vs stronger escalation; single-question vs batched decisions.
+6. **Model experiments:** `perplexity/pplx-decider-v1.2` vs Flash/compatible alternatives; cheap primary extraction (`anthropic/claude-haiku-5.5`) vs stronger escalation (`google/gemini-4-argon`); single-question vs batched decisions.
 7. **Modality comparison:** TEXT / VISION / BOTH on the **same** examples, allowing multiple successful strategies.
 
 Use versioned model settings, prompts, schemas and identical frozen splits. Record downstream effects of missed relevance decisions instead of hiding them inside aggregate extraction scores.

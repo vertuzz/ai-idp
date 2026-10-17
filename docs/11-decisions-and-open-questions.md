@@ -8,7 +8,7 @@
 
 **ADR-003 — Lightweight DOCX.** Use Mammoth to extract semantic HTML and logical blocks without rendering Word page layouts. DOCX provenance uses semantic block IDs, not fictional physical page numbers. No headless LibreOffice in the MVP.
 
-**ADR-004 — One model gateway.** Use OpenRouter for decision and generative model APIs in the MVP. Keep model identity and capabilities configurable. Use Pydantic AI for generative extraction, and a dedicated typed httpx adapter for the Decisions API.
+**ADR-004 — One model gateway.** Use OpenRouter for decision and generative model APIs in the MVP. Keep model identity and capabilities configurable, with an initial smoke-tested baseline of `perplexity/pplx-decider-v1.2` (decision/verification), `anthropic/claude-haiku-5.5` (primary extraction), and `google/gemini-4-argon` (escalation). Use Pydantic AI for generative extraction, and a dedicated typed httpx adapter for the Decisions API (`POST /api/alpha/decisions`).
 
 **ADR-005 — PostgreSQL-only queue.** Use an existing PostgreSQL server for persistence, durable job state, and leased worker polling. No Redis or Celery for MVP.
 
@@ -30,12 +30,12 @@ verification is on Windows; Linux/macOS verification remains pending.
 
 ## Open questions for implementation experiments
 
-1. Which JSON Schema constructs are reliably supported by the chosen generative model and Pydantic AI pipeline (especially nested arrays, union types and $ref)?
-2. What is the exact current OpenRouter Decisions API contract for image+text state, multiple named questions, scoring and billing? Verify with a live smoke test.
+1. Which JSON Schema constructs are reliably supported by the chosen generative models (`anthropic/claude-haiku-5.5`, `google/gemini-4-argon`) and Pydantic AI pipeline (especially nested arrays, union types and $ref)?
+2. How does question batching vs single-question invocation affect accuracy and latency on the OpenRouter Decisions API (`POST /api/alpha/decisions`, verified for `image_url` + text state, `noul`/`choice`/`score` criteria, and token billing via `scripts.smoke_models`)?
 3. How should probabilities from different decision tasks and models be normalized without misrepresenting confidence?
 4. Which relevance threshold/top-K recovery policy yields acceptable page recall? Evaluate on labeled data.
 5. When is DOCX semantic conversion insufficient to capture visual-only content? Measure, then decide whether an optional renderer is justified.
-6. Which configurable extraction and escalation model pair produces the best verified-field cost without sacrificing accuracy?
+6. How does the baseline `anthropic/claude-haiku-5.5` + `google/gemini-4-argon` pair compare against alternatives (such as `google/gemini-3.8-flash` or `qwen/qwen3.8-flash`) on verified-field cost and accuracy?
 7. Should image rendering happen eagerly or lazily for very long PDFs?
 8. Which JSONL exporter implementation works best with the latest OpenTelemetry SDK, while supporting rotation and privacy defaults?
 9. Which exact per-file reuse licences and attributions apply to selected government documents and third-party PDFs, and which upstream binaries may be redistributed? Resolve each in the corpus manifest before publication.
