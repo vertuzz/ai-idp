@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
 from ai_idp.domain.errors import DomainError
@@ -26,8 +27,19 @@ class LocalDocumentBlobStore:
     def put_bytes(self, key: str, content: bytes) -> str:
         target = self._resolve_safe_path(key)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(content)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as stream:
+                temporary = Path(stream.name)
+                stream.write(content)
+            temporary.replace(target)
+        finally:
+            if temporary:
+                temporary.unlink(missing_ok=True)
         return key
+
+    def get_size(self, key: str) -> int:
+        return self._resolve_safe_path(key).stat().st_size
 
     def get_bytes(self, key: str) -> bytes:
         target = self._resolve_safe_path(key)

@@ -1,6 +1,8 @@
-# 06 — HTTP API Contracts (Draft)
+# 06 — HTTP API Contracts
 
-Versioned REST API under /v1. All response shapes shown are *illustrative design contracts*, not implemented endpoints.
+Versioned REST API under /v1. The routes below are implemented; the application-generated
+OpenAPI specification at `/openapi.json` is authoritative for complete current shapes.
+JSON examples remain illustrative, not model measurements. See [schema policy and operations](13-operations-and-release.md).
 
 ## POST /v1/documents
 
@@ -124,12 +126,22 @@ Status values: pending, running, completed, completed_with_unresolved, failed, c
 
 Scores above are fabricated examples for API illustration, not actual model measurements.
 
-## Additional endpoints (later MVP)
+## Additional implemented endpoints
 
 - GET /v1/documents/{document_id} — metadata and preparation status.
 - GET /v1/extractions/{job_id}/decisions — paginated debug decisions; restrict raw source access.
 - POST /v1/extractions/{job_id}/cancel — request cancellation.
 - GET /health/live and /health/ready.
+- GET /v1/documents/{document_id}/content — original bytes.
+- GET /v1/documents/{document_id}/units — paginated source-unit metadata.
+- GET /v1/documents/{document_id}/units/{unit_id}/text — source text.
+- GET /v1/documents/{document_id}/units/{unit_id}/images/{image_index} — source image, zero-based index.
+
+Decision pagination uses `offset` and `limit` (1–1,000), with `next_offset` or null.
+Job status includes the effective configuration. Results include `schema_errors` and
+candidate `attempts` for every field, including nested pointers such as `/items/0/price`.
+`schema_valid` is independent of verification and unresolved-field state. Unknown model
+profiles return 422; reuse of an idempotency key for a different request returns 409.
 
 ## Errors and constraints
 

@@ -73,6 +73,21 @@ class ProviderError(DomainError):
     http_status = 502
 
 
+class PermanentProviderError(DomainError):
+    code = "provider_request_rejected"
+    http_status = 502
+
+
+class JobTimeLimitExceededError(DomainError):
+    code = "job_time_limit_exceeded"
+    http_status = 422
+
+
+class ModelInputLimitExceededError(DomainError):
+    code = "model_input_limit_exceeded"
+    http_status = 422
+
+
 class JobLeaseLostError(DomainError):
     code = "job_lease_lost"
     http_status = 409

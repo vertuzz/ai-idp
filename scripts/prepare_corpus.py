@@ -59,6 +59,11 @@ def main():
         target = ROOT / case["annotation_path"]
         if target.exists():
             continue
+        if case.get("annotation_status") in ("reviewed", "ai_reviewed"):
+            raise FileNotFoundError(
+                "A reviewed answer set is missing. Restore its exact bytes from source control "
+                "or the local review backup; it cannot be regenerated as a draft."
+            )
         annotation = {"case_id": case["case_id"], "review_status": "pending_human_review"}
         if case["source"] == "cord_v2":
             annotation.update(cord_annotation(case))
@@ -83,7 +88,8 @@ def main():
         raise ValueError("Corpus verification failed: " + str(report["errors"]))
     print(
         f"Verified {report['documents']}/120 files. "
-        f"Reviewed evaluation-ready cases: {report['evaluation_ready']}/120."
+        f"AI source-reviewed: {report['ai_source_reviewed']}/120. "
+        f"Human benchmark-ready: {report['evaluation_ready']}/120."
     )
 
 

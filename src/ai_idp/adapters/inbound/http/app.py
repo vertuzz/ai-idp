@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import asyncio
+import tempfile
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, FastAPI, File, Header, Query, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, FastAPI, File, Header, Query, Request, UploadFile
+from fastapi.responses import JSONResponse, Response
 
+from ai_idp.adapters.inbound.http.body_limit import BodyLimitMiddleware, RequestBodyTooLarge
 from ai_idp.adapters.inbound.http.dependencies import AppContainer, build_container
 from ai_idp.adapters.inbound.http.schemas import (
     CreateExtractionRequest,
@@ -16,13 +19,15 @@ from ai_idp.adapters.inbound.http.schemas import (
     DocumentUploadResponse,
     EvidenceItemResponse,
     ExtractionResultResponse,
+    FieldAttemptResponse,
     FieldResultItemResponse,
     JobLinks,
     JobProgressResponse,
     JobStatusResponse,
     JobUsageResponse,
 )
-from ai_idp.domain.errors import DomainError
+from ai_idp.adapters.inbound.http.telemetry import RequestTelemetryMiddleware
+from ai_idp.domain.errors import DomainError, UploadTooLargeError
 
 
 def create_app(container: AppContainer | None = None) -> FastAPI:
@@ -32,6 +37,26 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
         description="Evaluation-first, AI-directed intelligent document processing",
     )
     app.state.container = container or build_container()
+    app.add_middleware(RequestTelemetryMiddleware, telemetry=app.state.container.telemetry)
+    app.add_middleware(
+        BodyLimitMiddleware, max_bytes=app.state.container.settings.max_upload_bytes + 64 * 1024
+    )
+    ingestion_slots = asyncio.Semaphore(app.state.container.settings.max_concurrent_jobs)
+
+    async def ingestion_slot():
+        async with ingestion_slots:
+            yield
+
+    @app.exception_handler(RequestBodyTooLarge)
+    async def handle_oversized_body(_request: Request, _exc: RequestBodyTooLarge) -> JSONResponse:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error_id": f"err_{uuid.uuid4().hex[:10]}",
+                "code": "upload_too_large",
+                "message": "Request body exceeds the configured size limit.",
+            },
+        )
 
     @app.exception_handler(DomainError)
     async def handle_domain_error(_request: Request, exc: DomainError) -> JSONResponse:
@@ -69,15 +94,28 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
     async def upload_document(
         request: Request,
         file: Annotated[UploadFile, File(...)],
+        _slot: None = Depends(ingestion_slot),
     ) -> DocumentUploadResponse:
         c: AppContainer = request.app.state.container
-        raw_bytes = await file.read()
-        doc = c.ingest_use_case.execute(
-            raw_bytes=raw_bytes,
-            filename=file.filename or "upload.bin",
-            declared_media_type=file.content_type,
-            eager_normalize=True,
-        )
+        try:
+            with tempfile.TemporaryFile() as upload:
+                received = 0
+                while chunk := await file.read(1024 * 1024):
+                    received += len(chunk)
+                    if received > c.settings.max_upload_bytes:
+                        raise UploadTooLargeError("Upload exceeds the configured size limit.")
+                    upload.write(chunk)
+                upload.seek(0)
+                raw_bytes = upload.read()
+            doc = await asyncio.to_thread(
+                c.ingest_use_case.execute,
+                raw_bytes=raw_bytes,
+                filename=file.filename or "upload.bin",
+                declared_media_type=file.content_type,
+                eager_normalize=True,
+            )
+        finally:
+            await file.close()
         return DocumentUploadResponse(
             document_id=doc.document_id,
             filename=doc.filename,
@@ -98,7 +136,97 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
             bytes=doc.bytes_size,
             status=doc.status.value,
             units_count=len(units),
+            conversion_warnings=list(
+                dict.fromkeys(
+                    warning for u in units for warning in u.metadata.get("conversion_warnings", [])
+                )
+            ),
             created_at=doc.created_at,
+        )
+
+    @v1.get("/documents/{document_id}/content")
+    async def get_original(request: Request, document_id: str) -> Response:
+        c: AppContainer = request.app.state.container
+        document, _ = c.inspect_job_use_case.get_document(document_id)
+        return Response(
+            c.blob_store.get_bytes(document.storage_key),
+            media_type=document.media_type,
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+                "Content-Disposition": "attachment",
+            },
+        )
+
+    @v1.get("/documents/{document_id}/units")
+    async def list_units(
+        request: Request,
+        document_id: str,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+    ) -> dict:
+        c: AppContainer = request.app.state.container
+        _, units = c.inspect_job_use_case.get_document(document_id)
+        return {
+            "document_id": document_id,
+            "offset": offset,
+            "limit": limit,
+            "next_offset": offset + limit if offset + limit < len(units) else None,
+            "units": [
+                {
+                    "unit_id": u.unit_id,
+                    "kind": u.kind.value,
+                    "locator": u.source_locator,
+                    "available_modalities": [m.value for m in u.available_modalities],
+                    "conversion_warnings": u.metadata.get("conversion_warnings", []),
+                    "image_count": len(set(([u.image_ref] if u.image_ref else []) + u.image_refs)),
+                    "has_text": bool(u.native_text_ref),
+                }
+                for u in units[offset : offset + limit]
+            ],
+        }
+
+    @v1.get("/documents/{document_id}/units/{unit_id}/text")
+    async def get_unit_text(request: Request, document_id: str, unit_id: str) -> Response:
+        c: AppContainer = request.app.state.container
+        _, units = c.inspect_job_use_case.get_document(document_id)
+        unit = next((u for u in units if u.unit_id == unit_id), None)
+        if unit is None or not unit.native_text_ref:
+            raise DomainError(
+                "Source text is unavailable.", code="artifact_not_found", http_status=404
+            )
+        return Response(
+            c.blob_store.get_text(unit.native_text_ref),
+            media_type="text/plain",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
+
+    @v1.get("/documents/{document_id}/units/{unit_id}/images/{image_index}")
+    async def get_unit_image(
+        request: Request,
+        document_id: str,
+        unit_id: str,
+        image_index: int,
+    ) -> Response:
+        c: AppContainer = request.app.state.container
+        _, units = c.inspect_job_use_case.get_document(document_id)
+        unit = next((u for u in units if u.unit_id == unit_id), None)
+        refs = list(
+            dict.fromkeys(
+                ([unit.image_ref] if unit and unit.image_ref else [])
+                + (unit.image_refs if unit else [])
+            )
+        )
+        if image_index < 0 or image_index >= len(refs):
+            raise DomainError(
+                "Source image is unavailable.", code="artifact_not_found", http_status=404
+            )
+        ref = refs[image_index]
+        media_type = "image/jpeg" if ref.endswith((".jpg", ".jpeg")) else "image/png"
+        return Response(
+            c.blob_store.get_bytes(ref),
+            media_type=media_type,
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
         )
 
     @v1.post("/extractions", status_code=202, response_model=CreateExtractionResponse)
@@ -148,8 +276,12 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
             usage=JobUsageResponse(
                 llm_calls=job.usage.llm_calls,
                 estimated_cost_usd=job.usage.estimated_cost_usd,
+                tokens_in=job.usage.tokens_in,
+                tokens_out=job.usage.tokens_out,
+                total_latency_ms=job.usage.total_latency_ms,
             ),
             last_error=job.last_error,
+            configuration=job.configuration.model_dump(mode="json"),
             created_at=job.created_at,
             updated_at=job.updated_at,
         )
@@ -174,6 +306,10 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
                 ],
                 attempt_count=fv.attempt_count,
                 unresolved_reason=fv.unresolved_reason,
+                attempts=[
+                    FieldAttemptResponse.model_validate(a.model_dump(mode="json"))
+                    for a in fv.attempts
+                ],
             )
             for f_path, fv in result.fields.items()
         }
@@ -182,20 +318,32 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
             status=result.status.value,
             data=result.data,
             schema_valid=result.schema_valid,
+            schema_errors=result.schema_errors,
             fields=fields_resp,
             unresolved_fields=result.unresolved_fields,
             usage=JobUsageResponse(
                 llm_calls=result.usage.llm_calls,
                 estimated_cost_usd=result.usage.estimated_cost_usd,
+                tokens_in=result.usage.tokens_in,
+                tokens_out=result.usage.tokens_out,
+                total_latency_ms=result.usage.total_latency_ms,
             ),
         )
 
     @v1.get("/extractions/{job_id}/decisions", response_model=DecisionsListResponse)
-    async def get_extraction_decisions(request: Request, job_id: str) -> DecisionsListResponse:
+    async def get_extraction_decisions(
+        request: Request,
+        job_id: str,
+        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+    ) -> DecisionsListResponse:
         c: AppContainer = request.app.state.container
-        decisions = c.inspect_job_use_case.list_decisions(job_id)
+        decisions = c.inspect_job_use_case.list_decisions(job_id, offset=offset, limit=limit + 1)
         return DecisionsListResponse(
             job_id=job_id,
+            offset=offset,
+            limit=limit,
+            next_offset=offset + limit if len(decisions) > limit else None,
             decisions=[
                 DecisionItemResponse(
                     decision_id=d.decision_id,
@@ -209,7 +357,7 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
                     latency_ms=d.latency_ms,
                     created_at=d.created_at,
                 )
-                for d in decisions
+                for d in decisions[:limit]
             ],
         )
 
@@ -231,6 +379,9 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
             usage=JobUsageResponse(
                 llm_calls=job.usage.llm_calls,
                 estimated_cost_usd=job.usage.estimated_cost_usd,
+                tokens_in=job.usage.tokens_in,
+                tokens_out=job.usage.tokens_out,
+                total_latency_ms=job.usage.total_latency_ms,
             ),
             last_error=job.last_error,
             created_at=job.created_at,

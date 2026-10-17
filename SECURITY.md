@@ -1,7 +1,9 @@
 # Security Policy
 
-**Status:** This repository contains architecture documentation, local corpus preparation tools
-and project-owned synthetic fixtures. It is not a production-ready service.
+**Status:** This repository contains a self-hosted API and worker, document readers, model
+adapters and evaluation tools. Deployment assumes one trusted access boundary; no public
+authentication or multi-tenant isolation is implemented. Reviewed benchmark acceptance
+is still pending. See [deployment and release gates](docs/13-operations-and-release.md).
 
 ## Secrets and sensitive data
 

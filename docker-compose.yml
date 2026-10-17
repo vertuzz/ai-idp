@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_idp}
       POSTGRES_DB: ${POSTGRES_DB:-ai_idp}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +15,18 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    healthcheck:
+      disable: true
+    build: .
+    env_file: [.env]
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-ai_idp}:${POSTGRES_PASSWORD:-ai_idp}@postgres:5432/${POSTGRES_DB:-ai_idp}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["uv", "run", "--locked", "python", "-m", "alembic", "upgrade", "head"]
 
   api:
     build:
@@ -28,16 +40,22 @@ services:
       APP_HOST: 0.0.0.0
       APP_PORT: 8000
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
       - ./telemetry:/app/telemetry
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
     command: ["uv", "run", "uvicorn", "ai_idp.adapters.inbound.http.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
 
   worker:
+    healthcheck:
+      disable: true
+    stop_grace_period: 35s
     build:
       context: .
       dockerfile: Dockerfile
@@ -52,6 +70,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
     command: ["uv", "run", "python", "-m", "ai_idp.workers.runner"]
 
 volumes:

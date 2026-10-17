@@ -77,18 +77,23 @@ class MammothDocxDocumentReader:
         self._validate_zip_safety(raw_bytes)
 
         embedded_images: dict[str, str] = {}
+        unavailable_images: set[str] = set()
         image_counter = 0
 
         def convert_image(image: Any) -> dict[str, str]:
             nonlocal image_counter
             image_counter += 1
             content_type = getattr(image, "content_type", "image/png") or "image/png"
-            ext = "png"
+            ext = "png" if content_type == "image/png" else "bin"
             if "jpeg" in content_type or "jpg" in content_type:
                 ext = "jpg"
             elif "webp" in content_type:
                 ext = "webp"
+            elif "emf" in content_type:
+                ext = "emf"
             img_name = f"image{image_counter}.{ext}"
+            if ext not in ("png", "jpg", "webp"):
+                unavailable_images.add(img_name)
             img_key = f"artifacts/{document.document_id}/images/{img_name}"
             with image.open() as img_stream:
                 img_bytes = img_stream.read()
@@ -105,6 +110,12 @@ class MammothDocxDocumentReader:
             raise MalformedDocumentError(f"Failed to convert DOCX with Mammoth: {exc}") from exc
 
         warnings = [str(m.message) for m in (result.messages or [])]
+        if unavailable_images:
+            warnings.insert(
+                0,
+                "Some embedded images have an unsupported rendering format; "
+                "their bytes are preserved but cannot be sent as raster images.",
+            )
         soup = BeautifulSoup(result.value or "", "html.parser")
 
         raw_blocks: list[dict[str, Any]] = []
@@ -215,7 +226,8 @@ class MammothDocxDocumentReader:
                 text_ref = text_key
 
             blk_images: list[str] = blk["images"]
-            primary_image_name = blk_images[0] if blk_images else None
+            supported_images = [name for name in blk_images if name not in unavailable_images]
+            primary_image_name = supported_images[0] if supported_images else None
             image_ref = embedded_images.get(primary_image_name) if primary_image_name else None
 
             locator: dict[str, Any] = {"block_id": unit_id, "block_index": idx}
@@ -233,11 +245,16 @@ class MammothDocxDocumentReader:
                     source_locator=locator,
                     native_text_ref=text_ref,
                     image_ref=image_ref,
-                    image_refs=[embedded_images[name] for name in dict.fromkeys(blk_images)],
+                    image_refs=[embedded_images[name] for name in dict.fromkeys(supported_images)],
                     metadata={
                         "heading": blk["heading"],
                         "table_count": blk["table_count"],
                         "embedded_images": blk_images,
+                        "unavailable_images": [
+                            embedded_images[name]
+                            for name in blk_images
+                            if name in unavailable_images
+                        ],
                         "text_character_count": len(text_content),
                         "conversion_warnings": warnings[:10],
                     },

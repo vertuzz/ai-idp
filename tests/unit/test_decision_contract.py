@@ -76,7 +76,7 @@ async def test_verifier_gets_complete_candidate_all_sources_and_citations():
         )
     )
     spec = normalize_extraction_schema(
-        {"type": "object", "properties": {"items": {"type": "array"}}}
+        {"type": "object", "properties": {"items": {"type": "array", "items": {"type": "string"}}}}
     )
     payloads = {
         name: UnitInputPayload(
@@ -134,7 +134,7 @@ async def test_extractor_preserves_full_text_and_every_image(monkeypatch):
     monkeypatch.setattr(module, "Agent", Agent)
     monkeypatch.setattr(module, "OpenAIChatModel", lambda *args, **kwargs: None)
     engine = module.PydanticAIExtractionEngine(api_key="unused")
-    monkeypatch.setattr(engine, "_build_provider", lambda: None)
+    monkeypatch.setattr(engine, "_build_provider", lambda client=None: None)
     spec = normalize_extraction_schema({"type": "object", "properties": {"id": {"type": "string"}}})
     payload = UnitInputPayload(
         unit=DocumentUnit(unit_id="u", document_id="d", ordinal=1, kind=UnitKind.DOCX_BLOCK),
@@ -149,3 +149,32 @@ async def test_extractor_preserves_full_text_and_every_image(monkeypatch):
     )
     assert any(isinstance(p, str) and "TAIL" in p for p in sent)
     assert [p.data for p in sent if isinstance(p, module.BinaryContent)] == [b"one", b"two"]
+
+
+async def test_image_limits_count_all_embedded_images_without_dropping_units():
+    from ai_idp.application.services.batching import unit_batches
+    from ai_idp.domain.enums import Modality
+    from ai_idp.domain.errors import ModelInputLimitExceededError
+
+    inputs = [
+        (
+            UnitInputPayload(
+                unit=DocumentUnit(
+                    unit_id=f"u{i}", document_id="d", ordinal=i + 1, kind=UnitKind.DOCX_BLOCK
+                ),
+                image_bytes=b"one",
+                additional_images=[(b"two", "image/png")],
+            ),
+            Modality.TEXT_AND_VISION,
+        )
+        for i in range(10)
+    ]
+    batches = unit_batches(inputs, max_units=12, max_bytes=1_000_000, max_images=8)
+    assert [len(b) for b in batches] == [4, 4, 2]
+    assert [p.unit.unit_id for b in batches for p, _ in b] == [f"u{i}" for i in range(10)]
+    inputs[0][0].additional_images = [(b"image", "image/png")] * 8
+    with pytest.raises(ModelInputLimitExceededError):
+        unit_batches(inputs, max_units=12, max_bytes=1_000_000, max_images=8)
+    engine = OpenRouterDecisionEngine(api_key="unused", max_images=8)
+    with pytest.raises(ModelInputLimitExceededError):
+        await engine._post_decisions("model", [{"type": "image_url"}] * 9, {})

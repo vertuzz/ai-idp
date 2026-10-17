@@ -2,7 +2,8 @@
 
 All **120 candidate files** have been retrieved or generated: 35 DocLayNet PDF pages,
 30 CORD receipts, 20 government PDFs, 15 government DOCX files and 20 synthetic stress
-documents. This is a complete file inventory, **not a reviewed benchmark**.
+documents. All now have owner-authorized **AI source reviews**, covering 1,024 reference
+fields. This supports local development assessment; it is not independent human ground truth.
 
 - [Browse all documents and review status](CORPUS.md)
 - [Machine-readable inventory](manifest.jsonl) and [integrity report](corpus-status.json)
@@ -25,6 +26,9 @@ Preparation verifies existing assets against the manifest, restores missing orig
 preserves existing local annotation files. A modified asset fails verification rather than
 being silently replaced. `validate_corpus --require-ready` deliberately fails until all 120
 cases have reviewed labels; ordinary integrity validation can pass before annotation review.
+Reviewed AI reference bytes are local model output and cannot be reconstructed from Git.
+If missing, restore them from the ignored local review backup; preparation fails explicitly
+instead of replacing a reviewed answer set with an unreviewed draft.
 
 ## Storage and retrieval
 
@@ -34,7 +38,7 @@ cases have reviewed labels; ordinary integrity validation can pass before annota
   groups, proposed splits and annotation status. This is candidate release v1; final freeze awaits review.
 - `*-selection.json`: source acquisition records used to reproduce the candidate selection.
 - `cache/`: ignored CORD shards, DocLayNet metadata and optional rendering tools/previews.
-- `results/`: ignored future model experiment outputs. No experiments have run.
+- `results/`: ignored diagnostic model outputs and JSON/CSV/Markdown experiment reports.
 
 ## What belongs in git
 
@@ -66,18 +70,40 @@ during initial visual selection was removed; further family/near-duplicate adjud
 
 ## Annotation state
 
+The owner authorized Codex to perform source review instead of requiring their manual review.
+All 120 corrected answer sets are stored in ignored `eval/downloads/corpus/ai-reviewed/`,
+with reviewer type, source hash, timestamp and case-specific notes. The original drafts remain
+available. The local source-review index is `eval/cache/ai-review/index.md`.
+See [review scope and limitations](../docs/15-ai-source-review.md).
+
+The initial answer sets came from:
+
 - **30 CORD cases:** draft JSON Schemas, original amount strings and top-level line items,
   with candidate word-level evidence. Item-to-line mapping and label semantics require review.
 - **20 synthetic cases:** parameter-derived answer keys, current-period/old-period distractors,
   deliberately missing purchase-order references, and draft page/image evidence. DOCX semantic
   block IDs still await the ingestion contract.
-- **70 DocLayNet/government cases:** annotation work files exist, but schemas, expected values
-  and supporting evidence are not yet authored. Layout/OCR labels are not extraction gold.
-- **0 cases** are currently marked `evaluation_ready`. Do not publish accuracy/cost claims yet.
+- **70 DocLayNet/government cases:** model-assisted draft schemas, scalar reference values
+  and source citations are available locally. They require human correction and review;
+  layout/OCR labels and model drafts are not extraction gold.
+- **120 cases** have `annotation_status=ai_reviewed`. **0 cases** are marked
+  human-reviewed `evaluation_ready`. Draft-mode development reports identify their
+  reference review status and must be described as AI-reference diagnostics.
 
 The preview selection contains 24 development cases across all five sources, all six DocLayNet
 categories, and all four synthetic formats. Review this preview first, then complete the other
 96 cases before final benchmark freeze. Do not tune prompts on calibration or holdout cases.
+
+Prepare the local review pack with `uv run --locked --group evaluation python -m scripts.review_corpus prepare`.
+Its index and editable drafts live under ignored `eval/cache/human-review/`. The
+`record-review` command records a supplied human decision, checks schema/source consistency,
+and writes reviewed annotations and manifest references. It does not perform the review.
+See [review procedure](../docs/13-operations-and-release.md).
+
+Model evaluation requires `--live --max-total-cost-usd AMOUNT`. By default only reviewed,
+evaluation-ready cases are accepted. `--allow-draft` explicitly permits development-only
+diagnostics; those reports cannot be called a reviewed benchmark. Calibration and holdout
+never accept draft mode. Failures remain in the reported denominator.
 
 ## Rights and verification
 

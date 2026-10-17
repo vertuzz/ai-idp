@@ -59,9 +59,11 @@ class InspectJobUseCase:
             raise JobNotCompletedError(f"Result for job '{job_id}' is not persisted.")
         return result
 
-    def list_decisions(self, job_id: str) -> list[DecisionRecord]:
+    def list_decisions(
+        self, job_id: str, *, offset: int = 0, limit: int | None = None
+    ) -> list[DecisionRecord]:
         self.get_job(job_id)
-        return self._result_repo.list_decisions(job_id)
+        return self._result_repo.list_decisions(job_id, offset=offset, limit=limit)
 
     def cancel_job(self, job_id: str) -> ExtractionRun:
         self.get_job(job_id)

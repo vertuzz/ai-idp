@@ -35,7 +35,7 @@ For arrays, field identity may include item paths and each item may reference a 
 
 Verify **against source material**: original text or rendered image, relevant schema description, extracted candidate and evidence locators. Do not simply re-check a generative model's own summary.
 
-Verification receives all prepared source units, complete candidate values and complete citations. A verdict applies to the entire value, including every array item. Null and empty collections are absence claims: they are verified only when the decision model confirms absence from the complete document. Missing values can receive bounded recovery using all units, including already selected units.
+Verification visits all prepared source units in bounded source/field batches, with complete candidate values and citations. Container verdicts apply to the entire value; concrete nested leaves receive additional independent checks and bounded scalar recovery. Null and empty collections are absence claims and need support across every source batch. Contradictions prevent acceptance; insufficient cross-batch support remains unresolved. Missing values can receive bounded recovery using all units, including already selected units. See [operational semantics](13-operations-and-release.md).
 
 Populated fields need valid source citations to become verified. Unknown unit IDs are dropped, canonical locators take precedence over model-supplied identity, and missing citations remain missing until recovered. Search context is never manufactured into returned evidence. The configured support threshold is applied to the original probability vector; unsupported or unavailable scores remain unresolved.
 

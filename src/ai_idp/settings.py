@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +53,13 @@ class Settings(BaseSettings):
         default=Path("./telemetry"),
         validation_alias="LOCAL_TELEMETRY_ROOT",
     )
+    telemetry_max_mib: int = Field(default=10, ge=1, validation_alias="TELEMETRY_MAX_MIB")
+    telemetry_retained_files: int = Field(
+        default=20, ge=0, validation_alias="TELEMETRY_RETAINED_FILES"
+    )
+    worker_shutdown_seconds: float = Field(
+        default=30, ge=0, validation_alias="WORKER_SHUTDOWN_SECONDS"
+    )
 
     # Safety and operational limits
     max_upload_mib: int = Field(default=200, validation_alias="MAX_UPLOAD_MIB")
@@ -60,18 +67,51 @@ class Settings(BaseSettings):
     max_docx_blocks: int = Field(default=1000, validation_alias="MAX_DOCX_BLOCKS")
     max_expanded_mib: int = Field(default=1024, validation_alias="MAX_EXPANDED_MIB")
     max_image_pixels: int = Field(default=40_000_000, validation_alias="MAX_IMAGE_PIXELS")
+    max_image_frames: int = Field(default=200, ge=1, validation_alias="MAX_IMAGE_FRAMES")
+    document_timeout_seconds: float = Field(
+        default=600, gt=0, validation_alias="DOCUMENT_TIMEOUT_SECONDS"
+    )
+    document_memory_mib: int = Field(default=1024, ge=1, validation_alias="DOCUMENT_MEMORY_MIB")
     max_concurrent_jobs: int = Field(default=2, ge=1, validation_alias="MAX_CONCURRENT_JOBS")
     max_concurrent_model_requests: int = Field(
         default=6,
         ge=1,
         validation_alias="MAX_CONCURRENT_MODEL_REQUESTS",
     )
-    max_provider_retries: int = Field(default=3, validation_alias="MAX_PROVIDER_RETRIES")
-    max_field_extra_attempts: int = Field(default=2, validation_alias="MAX_FIELD_EXTRA_ATTEMPTS")
-    max_coverage_reviews: int = Field(default=1, validation_alias="MAX_COVERAGE_REVIEWS")
+    per_model_concurrency: dict[str, int] = Field(
+        default={"*": 2}, validation_alias="PER_MODEL_CONCURRENCY"
+    )
+    model_requests_per_minute: dict[str, int] = Field(
+        default={"*": 60}, validation_alias="MODEL_REQUESTS_PER_MINUTE"
+    )
+    provider_timeout_seconds: float = Field(
+        default=120, gt=0, validation_alias="PROVIDER_TIMEOUT_SECONDS"
+    )
+    max_output_tokens: int = Field(default=8192, ge=128, validation_alias="MAX_OUTPUT_TOKENS")
+    max_provider_retries: int = Field(
+        default=3, ge=0, le=5, validation_alias="MAX_PROVIDER_RETRIES"
+    )
+    max_field_extra_attempts: int = Field(
+        default=2, ge=0, le=5, validation_alias="MAX_FIELD_EXTRA_ATTEMPTS"
+    )
+    max_coverage_reviews: int = Field(
+        default=1, ge=0, le=1, validation_alias="MAX_COVERAGE_REVIEWS"
+    )
     max_job_estimated_cost_usd: float = Field(
         default=10.0,
         validation_alias="MAX_JOB_ESTIMATED_COST_USD",
+    )
+    max_job_seconds: float = Field(default=600, gt=0, validation_alias="MAX_JOB_SECONDS")
+    max_model_calls: int = Field(default=250, ge=1, validation_alias="MAX_MODEL_CALLS")
+    max_model_input_bytes: int = Field(
+        default=20 * 1024 * 1024, ge=1024, validation_alias="MAX_MODEL_INPUT_BYTES"
+    )
+    max_units_per_call: int = Field(default=12, ge=2, validation_alias="MAX_UNITS_PER_CALL")
+    max_decision_images_per_call: int = Field(
+        default=8, ge=1, validation_alias="MAX_DECISION_IMAGES_PER_CALL"
+    )
+    max_prepared_input_mib: int = Field(
+        default=256, ge=1, validation_alias="MAX_PREPARED_INPUT_MIB"
     )
 
     # Pipeline tuning parameters
@@ -86,6 +126,13 @@ class Settings(BaseSettings):
     )
     worker_lease_seconds: int = Field(default=120, ge=1, validation_alias="WORKER_LEASE_SECONDS")
     worker_poll_seconds: float = Field(default=1.0, ge=0.01, validation_alias="WORKER_POLL_SECONDS")
+
+    @field_validator("per_model_concurrency", "model_requests_per_minute")
+    @classmethod
+    def positive_model_limits(cls, values: dict[str, int]) -> dict[str, int]:
+        if any(value < 1 for value in values.values()):
+            raise ValueError("Per-model limits must be positive integers.")
+        return values
 
     @property
     def max_upload_bytes(self) -> int:

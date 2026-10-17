@@ -1,5 +1,6 @@
 """Offline publication checks against the exact Git index, including binary metadata."""
 
+import argparse
 import hashlib
 import io
 import json
@@ -7,7 +8,7 @@ import re
 import subprocess
 import tomllib
 import zipfile
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from xml.etree import ElementTree
 
 import yaml
@@ -152,7 +153,20 @@ def check_fixtures(blobs: dict[str, bytes]) -> list[str]:
 
 
 def main() -> int:
-    blobs = read_index()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--worktree", action="store_true")
+    args = parser.parse_args()
+    if args.worktree:
+        names = (
+            subprocess.check_output(
+                ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"]
+            )
+            .decode("utf-8")
+            .split("\0")
+        )
+        blobs = {name: Path(name).read_bytes() for name in names if name and Path(name).is_file()}
+    else:
+        blobs = read_index()
     errors = []
     for path, data in blobs.items():
         errors.extend(f"{path}: {error}" for error in check_blob(path, data))
@@ -161,7 +175,8 @@ def main() -> int:
     if errors:
         print("Repository checks failed:\n" + "\n".join(errors))
         return 1
-    print(f"Checked {len(blobs)} staged files, document metadata and synthetic fixture hashes.")
+    scope = "worktree" if args.worktree else "staged"
+    print(f"Checked {len(blobs)} {scope} files, document metadata and synthetic fixture hashes.")
     return 0
 
 

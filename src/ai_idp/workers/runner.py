@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import signal
 import uuid
 
 from ai_idp.adapters.inbound.http.dependencies import AppContainer, build_container
@@ -52,17 +53,33 @@ class WorkerRunner:
                         pass
 
         active_tasks = {asyncio.create_task(slot()) for _ in range(self._max_concurrent)}
+        stopping = asyncio.create_task(self._stop_event.wait())
         try:
-            await asyncio.gather(*active_tasks)
+            done, _ = await asyncio.wait(
+                active_tasks | {stopping}, return_when=asyncio.FIRST_COMPLETED
+            )
+            if stopping in done:
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*active_tasks),
+                        self._container.settings.worker_shutdown_seconds,
+                    )
+                except TimeoutError:
+                    pass
+            else:
+                await asyncio.gather(*done)
         finally:
+            stopping.cancel()
             for task in active_tasks:
                 task.cancel()
-            await asyncio.gather(*active_tasks, return_exceptions=True)
+            await asyncio.gather(*active_tasks, stopping, return_exceptions=True)
 
 
 async def _main() -> None:
     container = build_container()
     runner = WorkerRunner(container)
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, lambda *_: runner.stop())
     await runner.run_forever()
 
 

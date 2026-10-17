@@ -8,6 +8,8 @@ import time
 import uuid
 from typing import Any
 
+import httpx
+
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
 from pydantic_ai import Agent, BinaryContent, StructuredDict
@@ -16,9 +18,10 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 
 from ai_idp.adapters.outbound.openrouter.pricing import estimate_cost_usd
+from ai_idp.adapters.outbound.openrouter.transport import LimitedTransport
 from ai_idp.application.ports.protocols import ExtractionBatchResult, UnitInputPayload
 from ai_idp.domain.enums import Modality
-from ai_idp.domain.errors import ProviderError
+from ai_idp.domain.errors import PermanentProviderError, ProviderError, RateLimitedError
 from ai_idp.domain.models import (
     Evidence,
     ExtractionSpecification,
@@ -36,8 +39,11 @@ def _make_nullable_property(prop_schema: dict[str, Any]) -> dict[str, Any]:
         cloned["type"] = [*raw_type, "null"]
     if isinstance(cloned.get("properties"), dict):
         cloned.setdefault("additionalProperties", False)
-    if isinstance(cloned.get("items"), dict) and cloned["items"].get("type") == "object":
-        cloned["items"].setdefault("additionalProperties", False)
+        cloned["properties"] = {
+            key: _make_nullable_property(child) for key, child in cloned["properties"].items()
+        }
+    if isinstance(cloned.get("items"), dict):
+        cloned["items"] = _make_nullable_property(cloned["items"])
     if "enum" in cloned and None not in cloned["enum"]:
         cloned["enum"].append(None)
     if "const" in cloned:
@@ -161,15 +167,23 @@ class PydanticAIExtractionEngine:
         max_concurrent_requests: int = 6,
         max_retries: int = 2,
         semaphore: asyncio.Semaphore | None = None,
+        limiter=None,
+        timeout_seconds: float = 120,
+        max_output_tokens: int = 8192,
+        max_input_bytes: int = 20 * 1024 * 1024,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._max_retries = max_retries
         self._semaphore = semaphore or asyncio.Semaphore(max_concurrent_requests)
+        self._limiter = limiter
+        self._timeout = timeout_seconds
+        self._max_output_tokens = max_output_tokens
+        self._max_input_bytes = max_input_bytes
 
-    def _build_provider(self) -> OpenAIProvider:
+    def _build_provider(self, http_client=None) -> OpenAIProvider:
         v1_url = self._base_url if self._base_url.endswith("/v1") else f"{self._base_url}/v1"
-        return OpenAIProvider(base_url=v1_url, api_key=self._api_key)
+        return OpenAIProvider(base_url=v1_url, api_key=self._api_key, http_client=http_client)
 
     async def extract_fields(
         self,
@@ -203,6 +217,8 @@ class PydanticAIExtractionEngine:
             "4. For every non-null extracted field, provide at least one item in '_evidence' "
             "with the exact 'field_path' (starting with '/'), the exact 'unit_id' "
             "(e.g. 'page_000001', 'block_000001', 'frame_000001'), and a verbatim 'quote'.\n"
+            "For nested objects and arrays, cite every scalar leaf separately using its "
+            "JSON Pointer, such as '/items/0/price'. Cite containers for completeness too.\n"
             f"5. Caller instructions: {caller_guidance}\n"
             "Target fields:\n" + "\n".join(field_lines)
         )
@@ -234,7 +250,14 @@ class PydanticAIExtractionEngine:
                     user_parts.append(f"Unit Image ({u.unit_id}, image {idx}):")
                     user_parts.append(BinaryContent(data=content, media_type=media_type))
 
-        provider = self._build_provider()
+        transport = (
+            LimitedTransport(self._limiter, self._max_input_bytes) if self._limiter else None
+        )
+        client = httpx.AsyncClient(
+            timeout=self._timeout,
+            transport=transport,
+        )
+        provider = self._build_provider(client)
         chat_model = OpenAIChatModel(model_id, provider=provider)
         agent = Agent(
             model=chat_model,
@@ -245,7 +268,7 @@ class PydanticAIExtractionEngine:
             ),
             system_prompt=system_instructions,
             retries=self._max_retries,
-            model_settings=ModelSettings(temperature=0.0),
+            model_settings=ModelSettings(temperature=0.0, max_tokens=self._max_output_tokens),
         )
 
         async with self._semaphore:
@@ -253,9 +276,27 @@ class PydanticAIExtractionEngine:
             try:
                 run_result = await agent.run(user_parts)
             except Exception as exc:
-                raise ProviderError(
-                    f"Extraction model '{model_id}' failed during '{stage_name}': {exc}"
-                ) from exc
+                cause = exc
+                while cause is not None:
+                    from ai_idp.domain.errors import DomainError
+
+                    if isinstance(cause, DomainError):
+                        raise cause from None
+                    cause = cause.__cause__
+                status = getattr(exc, "status_code", None)
+                if status == 429:
+                    raise RateLimitedError("Extraction provider rate limit exceeded.") from exc
+                if status and 400 <= status < 500:
+                    raise PermanentProviderError(
+                        f"Extraction provider rejected the request ({status})."
+                    ) from exc
+                error = ProviderError(
+                    f"Extraction model '{model_id}' failed during '{stage_name}'."
+                )
+                error.reported_cost = transport.reported_cost if transport else 0.0
+                raise error from exc
+            finally:
+                await client.aclose()
             latency_ms = int((time.perf_counter() - t0) * 1000)
 
         output_dict = run_result.output if isinstance(run_result.output, dict) else {}
@@ -276,7 +317,8 @@ class PydanticAIExtractionEngine:
             if matched_path is None:
                 top_seg = "/" + raw_path.lstrip("/").split("/")[0]
                 if top_seg in evidence_by_field:
-                    matched_path = top_seg
+                    matched_path = raw_path
+                    evidence_by_field.setdefault(matched_path, [])
             if matched_path is None:
                 continue
             uid = str(item.get("unit_id") or "").strip()
@@ -298,6 +340,8 @@ class PydanticAIExtractionEngine:
             getattr(run_usage, "output_tokens", 0) or getattr(run_usage, "response_tokens", 0) or 0
         )
         cost = estimate_cost_usd(model_id, tokens_in, tokens_out)
+        if transport and transport.cost_known:
+            cost = transport.reported_cost
 
         usage_record = UsageRecord(
             usage_id=f"use_{uuid.uuid4().hex[:12]}",
@@ -308,6 +352,7 @@ class PydanticAIExtractionEngine:
             tokens_out=tokens_out,
             estimated_cost_usd=cost,
             latency_ms=latency_ms,
+            call_count=max(1, int(getattr(run_usage, "requests", 1))),
         )
         return ExtractionBatchResult(
             data=extracted_data,

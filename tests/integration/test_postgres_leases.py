@@ -9,7 +9,7 @@ from threading import Barrier
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import make_url
 
 from ai_idp.adapters.outbound.persistence.models import JobQueueRow
@@ -93,3 +93,63 @@ async def test_postgres_crash_resume_does_not_repeat_paid_inference(
     assert result.status == JobStatus.COMPLETED
     assert result.usage.estimated_cost_usd < 0.10
     assert result.fields["/record_id"].attempt_count == 1
+
+
+def test_postgres_global_job_capacity_across_competing_owners(tmp_path, postgres_url):
+    c, doc, first = setup(tmp_path, database_url=postgres_url, max_concurrent_jobs=1)
+    from tests.integration.test_pipeline_recovery import SCHEMA
+
+    second = c.request_extraction_use_case.execute(document_id=doc.document_id, schema_json=SCHEMA)
+    barrier = Barrier(2)
+
+    def claim(job_id):
+        barrier.wait()
+        return c.job_repo.claim_job(job_id, job_id, 120)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        attempts = [pool.submit(claim, job.job_id) for job in (first, second)]
+        assert sum(f.result() is not None for f in attempts) == 1
+
+
+def test_postgres_model_capacity_is_shared_and_expired_requests_recover(tmp_path, postgres_url):
+    from ai_idp.adapters.outbound.persistence.model_limiter import DatabaseModelLimiter
+    from ai_idp.adapters.outbound.persistence.models import ModelRequestLeaseRow
+
+    c, _, _ = setup(tmp_path, database_url=postgres_url)
+    limiter = DatabaseModelLimiter(
+        c.job_repo._session_factory,
+        global_limit=1,
+        per_model={"*": 1},
+        requests_per_minute={"*": 1_000_000},
+    )
+    barrier = Barrier(2)
+
+    def acquire(model):
+        barrier.wait()
+        return limiter.try_acquire(model, model)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        attempts = [pool.submit(acquire, model) for model in ("model-a", "model-b")]
+        assert sum(f.result() for f in attempts) == 1
+    with c.job_repo._session_factory() as db:
+        lease = db.scalar(select(ModelRequestLeaseRow))
+        lease.expires_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.commit()
+    assert limiter.try_acquire("model-c", "replacement")
+
+
+def test_postgres_concurrent_idempotent_submissions_return_one_job(tmp_path, postgres_url):
+    from tests.integration.test_pipeline_recovery import SCHEMA
+
+    c, doc, _ = setup(tmp_path, database_url=postgres_url)
+    barrier = Barrier(2)
+
+    def submit():
+        barrier.wait()
+        return c.request_extraction_use_case.execute(
+            document_id=doc.document_id, schema_json=SCHEMA, idempotency_key="concurrent-key"
+        ).job_id
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        attempts = [pool.submit(submit) for _ in range(2)]
+        assert len({f.result() for f in attempts}) == 1

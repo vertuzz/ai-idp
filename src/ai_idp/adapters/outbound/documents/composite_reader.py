@@ -29,6 +29,7 @@ class CompositeDocumentReader:
                     max_expanded_bytes=settings.max_expanded_bytes,
                 ),
                 PillowImageDocumentReader(
+                    max_frames=settings.max_image_frames,
                     max_image_pixels=settings.max_image_pixels,
                 ),
             ]

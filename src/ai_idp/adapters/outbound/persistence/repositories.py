@@ -4,7 +4,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import PurePosixPath
 from typing import Any
 
-from sqlalchemy import or_, select, text
+from sqlalchemy import func, or_, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from ai_idp.adapters.outbound.persistence.leases import execution_scope, require_lease
@@ -19,6 +20,7 @@ from ai_idp.adapters.outbound.persistence.models import (
     FieldResultRow,
     JobQueueRow,
     JobStepRow,
+    ModelRequestLeaseRow,
     UsageRecordRow,
 )
 from ai_idp.domain.enums import (
@@ -30,7 +32,8 @@ from ai_idp.domain.enums import (
     UnitKind,
     VerificationStatus,
 )
-from ai_idp.domain.errors import JobLeaseLostError, JobNotFoundError
+from ai_idp.domain.errors import DomainError, JobLeaseLostError, JobNotFoundError
+from ai_idp.domain.field_paths import assemble_fields
 from ai_idp.domain.models import (
     DecisionRecord,
     Document,
@@ -46,6 +49,7 @@ from ai_idp.domain.models import (
     UsageRecord,
     UsageSummary,
 )
+from ai_idp.domain.partial_data import project_partial_data
 from ai_idp.domain.schema_normalizer import (
     normalize_extraction_schema,
     validate_data_against_schema,
@@ -61,7 +65,7 @@ def _compute_usage_summary(session: Session, job_id: str) -> UsageSummary:
     if not rows:
         return UsageSummary()
     return UsageSummary(
-        llm_calls=len(rows),
+        llm_calls=sum(r.call_count for r in rows),
         tokens_in=sum(r.tokens_in for r in rows),
         tokens_out=sum(r.tokens_out for r in rows),
         estimated_cost_usd=round(sum(r.estimated_cost_usd for r in rows), 6),
@@ -72,8 +76,11 @@ def _compute_usage_summary(session: Session, job_id: str) -> UsageSummary:
 class SqlAlchemyJobRepository:
     """PostgreSQL/SQLAlchemy implementation of JobRepository with SKIP LOCKED queue leasing."""
 
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(
+        self, session_factory: sessionmaker[Session], max_concurrent_jobs: int = 2
+    ) -> None:
         self._session_factory = session_factory
+        self._max_concurrent_jobs = max_concurrent_jobs
 
     execution_scope = staticmethod(execution_scope)
 
@@ -240,7 +247,30 @@ class SqlAlchemyJobRepository:
             )
             session.add(job_row)
             session.add(queue_row)
-            session.commit()
+            try:
+                session.commit()
+            except IntegrityError:
+                session.rollback()
+                existing = (
+                    self.get_job_by_idempotency_key(job.idempotency_key)
+                    if job.idempotency_key
+                    else None
+                )
+                if existing is None:
+                    raise
+                old_spec = self.get_spec(existing.spec_id)
+                new_spec = self.get_spec(job.spec_id)
+                if (
+                    existing.document_id != job.document_id
+                    or old_spec.schema_hash != new_spec.schema_hash
+                    or existing.configuration != job.configuration
+                ):
+                    raise DomainError(
+                        "Idempotency key conflicts with a different request.",
+                        code="idempotency_conflict",
+                        http_status=409,
+                    ) from None
+                return existing
             return self._row_to_job(session, job_row)
 
     def get_job(self, job_id: str) -> ExtractionRun | None:
@@ -337,6 +367,17 @@ class SqlAlchemyJobRepository:
         now = _utc_now()
         lease_until = now + timedelta(seconds=lease_seconds)
         with self._session_factory() as session:
+            if session.bind.dialect.name == "postgresql":
+                session.execute(text("SELECT pg_advisory_xact_lock(42691022)"))
+            elif session.bind.dialect.name == "sqlite":
+                session.execute(text("BEGIN IMMEDIATE"))
+            active = session.scalar(
+                select(func.count())
+                .select_from(JobQueueRow)
+                .where(JobQueueRow.status == "leased", JobQueueRow.lease_until > now)
+            )
+            if active >= self._max_concurrent_jobs:
+                return None
             stmt = (
                 select(JobQueueRow)
                 .where(
@@ -430,7 +471,9 @@ class SqlAlchemyJobRepository:
     def check_health(self) -> bool:
         try:
             with self._session_factory() as session:
-                session.execute(text("SELECT 1"))
+                session.execute(select(JobStepRow.job_id).limit(0))
+                session.execute(select(ModelRequestLeaseRow.id).limit(0))
+                session.execute(select(UsageRecordRow.call_count).limit(0))
             return True
         except Exception:
             return False
@@ -466,6 +509,7 @@ class SqlAlchemyResultRepository:
                         tokens_out=usage.tokens_out,
                         estimated_cost_usd=usage.estimated_cost_usd,
                         latency_ms=usage.latency_ms,
+                        call_count=usage.call_count,
                         created_at=usage.created_at,
                     )
                 )
@@ -499,12 +543,16 @@ class SqlAlchemyResultRepository:
                 )
             session.commit()
 
-    def list_decisions(self, job_id: str) -> list[DecisionRecord]:
+    def list_decisions(
+        self, job_id: str, *, offset: int = 0, limit: int | None = None
+    ) -> list[DecisionRecord]:
         with self._session_factory() as session:
             rows = session.scalars(
                 select(DecisionRow)
                 .where(DecisionRow.job_id == job_id)
                 .order_by(DecisionRow.created_at.asc(), DecisionRow.id.asc())
+                .offset(offset)
+                .limit(limit)
             ).all()
             return [
                 DecisionRecord(
@@ -573,6 +621,7 @@ class SqlAlchemyResultRepository:
                         tokens_out=usage.tokens_out,
                         estimated_cost_usd=usage.estimated_cost_usd,
                         latency_ms=usage.latency_ms,
+                        call_count=usage.call_count,
                         created_at=usage.created_at,
                     )
                 )
@@ -653,6 +702,7 @@ class SqlAlchemyResultRepository:
                         value=cand.get("value"),
                         sources=evs,
                         model_id=ar.model_id,
+                        modality=cand.get("modality"),
                         status=ar.status,
                         error=ar.error,
                         created_at=ar.created_at,
@@ -664,17 +714,17 @@ class SqlAlchemyResultRepository:
             unresolved_fields: list[str] = []
 
             row_by_path = {r.field_path: r for r in field_rows}
-            for f_spec in spec.fields:
-                r = row_by_path.get(f_spec.path)
+            paths = list(dict.fromkeys([f.path for f in spec.fields] + list(row_by_path)))
+            for path in paths:
+                r = row_by_path.get(path)
                 if r is None:
-                    data[f_spec.name] = None
-                    fields_map[f_spec.path] = FieldValue(
-                        path=f_spec.path,
+                    fields_map[path] = FieldValue(
+                        path=path,
                         value=None,
                         status=FieldStatus.UNRESOLVED,
                         unresolved_reason="Field was not processed.",
                     )
-                    unresolved_fields.append(f_spec.path)
+                    unresolved_fields.append(path)
                     continue
 
                 f_status = FieldStatus(r.field_status)
@@ -686,9 +736,8 @@ class SqlAlchemyResultRepository:
                     for ev in (r.sources_json or [])
                     if isinstance(ev, dict)
                 ]
-                data[f_spec.name] = r.final_value_json
-                fields_map[f_spec.path] = FieldValue(
-                    path=f_spec.path,
+                fields_map[path] = FieldValue(
+                    path=path,
                     value=r.final_value_json,
                     status=f_status,
                     verification=ver_status,
@@ -700,18 +749,20 @@ class SqlAlchemyResultRepository:
                     sources=sources,
                     attempt_count=r.attempt_count,
                     unresolved_reason=r.unresolved_reason,
-                    attempts=attempts_by_path.get(f_spec.path, []),
+                    attempts=attempts_by_path.get(path, []),
                 )
                 if f_status == FieldStatus.UNRESOLVED:
-                    unresolved_fields.append(f_spec.path)
+                    unresolved_fields.append(path)
 
+            data = project_partial_data(assemble_fields(fields_map), spec.schema_json)
             schema_valid, _errs = validate_data_against_schema(data, spec.schema_json)
             usage = _compute_usage_summary(session, job_id)
             return ExtractionResult(
                 job_id=job_id,
                 status=JobStatus(job_row.status),
                 data=data,
-                schema_valid=schema_valid and len(unresolved_fields) == 0,
+                schema_valid=schema_valid,
+                schema_errors=_errs,
                 fields=fields_map,
                 unresolved_fields=unresolved_fields,
                 usage=usage,

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import uuid
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
+from datetime import UTC, datetime
 from functools import partial
 from typing import Any
 
@@ -22,23 +25,29 @@ from ai_idp.application.ports.protocols import (
     UnitInputPayload,
     VerificationBatchResult,
 )
+from ai_idp.application.services.batching import unit_batches
+from ai_idp.application.services.request_budget import RequestBudget, active_request_budget
 from ai_idp.domain.enums import (
     FieldStatus,
     JobStage,
     JobStatus,
     Modality,
     PipelineMode,
+    UnitKind,
     VerificationStatus,
 )
 from ai_idp.domain.errors import (
     BudgetExhaustedError,
+    DocumentLimitExceededError,
     DocumentNotFoundError,
     DomainError,
     JobLeaseLostError,
     JobNotFoundError,
+    JobTimeLimitExceededError,
     ProviderError,
     RateLimitedError,
 )
+from ai_idp.domain.field_paths import assemble_fields, concrete_targets, get_pointer
 from ai_idp.domain.models import (
     DocumentUnit,
     Evidence,
@@ -53,6 +62,8 @@ from ai_idp.domain.models import (
     UsageRecord,
     VerificationOutcome,
 )
+from ai_idp.domain.partial_data import project_partial_data
+from ai_idp.domain.schema_normalizer import validate_data_against_schema
 
 
 def _guess_image_media_type(image_ref: str) -> str:
@@ -110,7 +121,22 @@ class ExtractionPipelineService:
                 raise JobLeaseLostError(f"Job '{job_id}' is unavailable or already executing.")
 
         with self._job_repo.execution_scope(job_id, owner):
-            execution = asyncio.create_task(self._execute_job(job_id))
+            started = self._result_repo.load_step(job_id, "execution:started")
+            if started is None:
+                started = {"at": datetime.now(UTC).isoformat()}
+                self._result_repo.save_step(job_id, "execution:started", started, None)
+            remaining = (
+                self._job_repo.get_job(job_id).configuration.max_job_seconds
+                - (datetime.now(UTC) - datetime.fromisoformat(started["at"])).total_seconds()
+            )
+
+            async def timed_execution():
+                try:
+                    return await asyncio.wait_for(self._execute_job(job_id), max(0, remaining))
+                except TimeoutError as exc:
+                    raise JobTimeLimitExceededError("Extraction job time limit exceeded.") from exc
+
+            execution = asyncio.create_task(timed_execution())
             heartbeat = asyncio.create_task(self._renew_lease(job_id, owner))
             try:
                 done, _ = await asyncio.wait(
@@ -132,7 +158,12 @@ class ExtractionPipelineService:
                     exc, (ProviderError, RateLimitedError)
                 )
                 self._job_repo.complete_queue_item(
-                    job_id, JobStatus.FAILED, error=str(exc)[:1000], retry=retry
+                    job_id,
+                    JobStatus.FAILED,
+                    error=exc.message
+                    if isinstance(exc, DomainError)
+                    else f"Unexpected internal failure ({type(exc).__name__}).",
+                    retry=retry,
                 )
                 raise
             finally:
@@ -152,14 +183,261 @@ class ExtractionPipelineService:
         adapter = TypeAdapter(result_type)
         saved = self._result_repo.load_step(job_id, key)
         if saved is not None:
+            self._telemetry.record_event("model.checkpoint_reused", {"job_id": job_id, "step": key})
             return adapter.validate_python(saved)
         job = self._job_repo.get_job(job_id)
         if job.usage.estimated_cost_usd >= job.configuration.max_job_estimated_cost_usd:
             raise BudgetExhaustedError(f"Job '{job_id}' exhausted its estimated spend budget.")
-        result = await call()
+        if job.usage.llm_calls >= job.configuration.max_model_calls:
+            raise BudgetExhaustedError(f"Job '{job_id}' exhausted its model-call budget.")
+        if self._job_repo.is_cancelled(job_id):
+            raise JobLeaseLostError(f"Job '{job_id}' was cancelled.")
+        request_budget = RequestBudget(job.configuration.max_model_calls - job.usage.llm_calls)
+        token = active_request_budget.set(request_budget)
+        try:
+            result = await call()
+        except Exception:
+            if request_budget.used:
+                self._result_repo.record_usage(
+                    UsageRecord(
+                        usage_id=f"use_{uuid.uuid4().hex[:12]}",
+                        job_id=job_id,
+                        stage="failed_request",
+                        model_id="see_configuration",
+                        call_count=request_budget.used,
+                        estimated_cost_usd=request_budget.reported_cost,
+                    )
+                )
+            raise
+        finally:
+            active_request_budget.reset(token)
+        if getattr(result, "usage", None) and request_budget.used:
+            result.usage.call_count = request_budget.used
         self._result_repo.save_step(
             job_id, key, adapter.dump_python(result, mode="json"), getattr(result, "usage", None)
         )
+        usage = getattr(result, "usage", None)
+        if usage:
+            self._telemetry.record_event(
+                "model.usage",
+                {
+                    "job_id": job_id,
+                    "step": key,
+                    "model_id": usage.model_id,
+                    "tokens_in": usage.tokens_in,
+                    "tokens_out": usage.tokens_out,
+                    "estimated_cost_usd": usage.estimated_cost_usd,
+                    "physical_calls": usage.call_count,
+                    "latency_ms": usage.latency_ms,
+                },
+            )
+        if (
+            self._job_repo.get_job(job_id).usage.estimated_cost_usd
+            > job.configuration.max_job_estimated_cost_usd
+        ):
+            raise BudgetExhaustedError("Job exceeded its estimated spend budget.")
+        return result
+
+    async def _extract_bounded(self, *, key: str, **kwargs: Any) -> ExtractionBatchResult:
+        job = self._job_repo.get_job(kwargs["job_id"])
+        config = job.configuration
+        batches = unit_batches(
+            kwargs["unit_inputs"],
+            max_units=config.max_units_per_call,
+            max_bytes=config.max_model_input_bytes,
+        )
+        if len(batches) <= 1:
+            return await self._model_step(
+                job.job_id,
+                key,
+                ExtractionBatchResult,
+                partial(self._extraction_engine.extract_fields, **kwargs),
+            )
+        results = []
+        for idx, batch in enumerate(batches):
+            result = await self._model_step(
+                job.job_id,
+                f"{key}:batch:{idx}",
+                ExtractionBatchResult,
+                partial(self._extraction_engine.extract_fields, **{**kwargs, "unit_inputs": batch}),
+            )
+            results.append(result)
+        # Merge bounded groups of model candidates. The model chooses values and table
+        # continuity; deterministic code never selects a winner or deduplicates line items.
+        level = 0
+        while len(results) > 1:
+            candidate_inputs = []
+            for idx, candidate in enumerate(results):
+                candidate_inputs.append(
+                    (
+                        UnitInputPayload(
+                            unit=DocumentUnit(
+                                unit_id=f"candidate_{level}_{idx}",
+                                document_id=job.document_id,
+                                ordinal=idx + 1,
+                                kind=UnitKind.DOCX_BLOCK,
+                            ),
+                            native_text=json.dumps(
+                                {
+                                    "data": candidate.data,
+                                    "evidence": {
+                                        p: [e.model_dump(mode="json") for e in evs]
+                                        for p, evs in candidate.evidence_by_field.items()
+                                    },
+                                },
+                                ensure_ascii=False,
+                            ),
+                        ),
+                        Modality.TEXT,
+                    )
+                )
+            groups = unit_batches(
+                candidate_inputs,
+                max_units=max(2, config.max_units_per_call),
+                max_bytes=config.max_model_input_bytes,
+            )
+            if len(groups) >= len(results):
+                from ai_idp.domain.errors import ModelInputLimitExceededError
+
+                raise ModelInputLimitExceededError("Candidate merge cannot fit two bounded inputs.")
+            merged = []
+            for idx, group in enumerate(groups):
+                merge_spec = kwargs["spec"].model_copy(
+                    update={
+                        "instructions": (
+                            kwargs["spec"].instructions
+                            + "\nMerge the candidate extractions below. "
+                            "Resolve conflicts using evidence; preserve distinct array items "
+                            "and source order. Candidates are intermediate model outputs. "
+                            "Cite original source unit IDs inside evidence, never candidate IDs. "
+                            "Return null for conflicts that cannot be resolved."
+                        )
+                    }
+                )
+                merged.append(
+                    await self._model_step(
+                        job.job_id,
+                        f"{key}:merge:{level}:{idx}",
+                        ExtractionBatchResult,
+                        partial(
+                            self._extraction_engine.extract_fields,
+                            **{**kwargs, "spec": merge_spec, "unit_inputs": group},
+                        ),
+                    )
+                )
+            results = merged
+            level += 1
+        return results[0].__class__(
+            data=results[0].data,
+            evidence_by_field=results[0].evidence_by_field,
+            model_id=results[0].model_id,
+        )
+
+    async def _verify_bounded(self, *, key: str, **kwargs: Any) -> VerificationBatchResult:
+        job = self._job_repo.get_job(kwargs["job_id"])
+        config = job.configuration
+        payloads = kwargs["unit_payloads_by_id"]
+        inputs = []
+        for payload in payloads.values():
+            has_images = bool(payload.image_bytes or payload.additional_images)
+            mode = (
+                Modality.TEXT_AND_VISION
+                if payload.native_text and has_images
+                else Modality.VISION
+                if has_images
+                else Modality.TEXT
+            )
+            inputs.append((payload, mode))
+        batches = unit_batches(
+            inputs,
+            max_units=config.max_units_per_call,
+            max_bytes=config.max_model_input_bytes,
+            max_images=config.max_decision_images_per_call,
+        )
+        fields = kwargs["fields_to_verify"]
+        field_groups = [fields[i : i + 24] for i in range(0, len(fields), 24)]
+        if len(batches) <= 1 and len(field_groups) <= 1:
+            result = await self._model_step(
+                job.job_id,
+                key,
+                VerificationBatchResult,
+                partial(self._decision_engine.verify_fields, **kwargs),
+            )
+            return self._guard_unavailable_sources(result, fields, payloads)
+        outcomes = {}
+        records = []
+        for gi, group in enumerate(field_groups):
+            results = []
+            for bi, batch in enumerate(batches):
+                scoped = {
+                    p.unit.unit_id: replace(p, verification_scope="document_batch")
+                    if len(batches) > 1
+                    else p
+                    for p, _ in batch
+                }
+                result = await self._model_step(
+                    job.job_id,
+                    f"{key}:fields:{gi}:sources:{bi}",
+                    VerificationBatchResult,
+                    partial(
+                        self._decision_engine.verify_fields,
+                        **{**kwargs, "fields_to_verify": group, "unit_payloads_by_id": scoped},
+                    ),
+                )
+                self._result_repo.record_decisions(result.decision_records)
+                records.extend(result.decision_records)
+                results.append((set(scoped), result))
+            for target, value, citations in group:
+                candidates = [r.outcomes[target.path] for _, r in results]
+                contradicted = [
+                    o for o in candidates if o.status == VerificationStatus.CONTRADICTED
+                ]
+                if contradicted:
+                    chosen = contradicted[0]
+                else:
+                    absence = value is None or value == [] or value == {}
+                    cited_ids = {e.unit_id for e in citations}
+                    required = [
+                        r.outcomes[target.path] for ids, r in results if absence or ids & cited_ids
+                    ]
+                    if required and all(o.status == VerificationStatus.SUPPORTED for o in required):
+                        chosen = min(
+                            required, key=lambda o: o.raw_probabilities.get("SUPPORTED", 0)
+                        )
+                    else:
+                        insufficient = [
+                            o
+                            for o in candidates
+                            if o.status == VerificationStatus.INSUFFICIENT_EVIDENCE
+                        ]
+                        chosen = (
+                            insufficient[0]
+                            if insufficient
+                            else VerificationOutcome(
+                                field_path=target.path,
+                                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                                model_id=config.decision_model,
+                                rationale="No complete cited support across source batches.",
+                            )
+                        )
+                outcomes[target.path] = chosen
+        return self._guard_unavailable_sources(
+            VerificationBatchResult(outcomes=outcomes, decision_records=records), fields, payloads
+        )
+
+    @staticmethod
+    def _guard_unavailable_sources(result, fields, payloads):
+        if any(p.unit.metadata.get("unavailable_images") for p in payloads.values()):
+            for target, value, _ in fields:
+                if value is None or value == [] or value == {}:
+                    outcome = result.outcomes.get(target.path)
+                    if outcome and outcome.status == VerificationStatus.SUPPORTED:
+                        result.outcomes[target.path] = outcome.model_copy(
+                            update={
+                                "status": VerificationStatus.INSUFFICIENT_EVIDENCE,
+                                "rationale": "Unavailable images prevent confirming absence.",
+                            }
+                        )
         return result
 
     async def _execute_job(self, job_id: str) -> ExtractionResult:
@@ -227,7 +505,7 @@ class ExtractionPipelineService:
             self._job_repo.update_job_progress(job_id, progress=progress)
 
             unit_payloads = await asyncio.to_thread(
-                self._load_unit_payloads, units, spec.instructions
+                self._load_unit_payloads, units, spec.instructions, config.max_prepared_input_bytes
             )
             payload_by_id = {p.unit.unit_id: p for p in unit_payloads}
             unit_by_id = {u.unit_id: u for u in units}
@@ -275,18 +553,14 @@ class ExtractionPipelineService:
                     "units_selected": len(selected_inputs),
                 },
             ):
-                extraction_batch = await self._model_step(
-                    job_id,
-                    "extract:initial",
-                    ExtractionBatchResult,
-                    lambda: self._extraction_engine.extract_fields(
-                        job_id=job_id,
-                        spec=spec,
-                        target_fields=spec.fields,
-                        unit_inputs=selected_inputs,
-                        model_id=config.extraction_model,
-                        stage_name="extracting",
-                    ),
+                extraction_batch = await self._extract_bounded(
+                    key="extract:initial",
+                    job_id=job_id,
+                    spec=spec,
+                    target_fields=spec.fields,
+                    unit_inputs=selected_inputs,
+                    model_id=config.extraction_model,
+                    stage_name="extracting",
                 )
                 record_usage(extraction_batch.usage)
 
@@ -382,6 +656,95 @@ class ExtractionPipelineService:
                     record_usage=record_usage,
                 )
 
+            # Expand concrete array items and object leaves after root recovery.
+            initial_data = assemble_fields(field_values)
+            concrete = concrete_targets(spec.schema_json, initial_data)
+            nested = [f for f in concrete if f.path not in field_values]
+            for target in nested:
+                root_path = "/" + target.path.split("/")[1]
+                root = field_values[root_path]
+                _, value = get_pointer(initial_data, target.path)
+                sources = self._normalize_evidences(
+                    extraction_batch.evidence_by_field.get(target.path, root.sources),
+                    unit_by_id=unit_by_id,
+                    default_unit_ids=list(payload_by_id),
+                )
+                attempt = FieldCandidateAttempt(
+                    field_path=target.path,
+                    attempt_number=1,
+                    value=value,
+                    sources=sources,
+                    model_id=root.attempts[-1].model_id,
+                )
+                self._result_repo.record_field_attempt(job_id, attempt)
+                field_values[target.path] = FieldValue(
+                    path=target.path,
+                    value=value,
+                    status=FieldStatus.UNVERIFIED,
+                    sources=sources,
+                    attempts=[attempt],
+                    attempt_count=1,
+                )
+            if nested and should_verify:
+                nested_spec = spec.model_copy(update={"fields": nested})
+                await self._verify_fields(
+                    job=job,
+                    spec=nested_spec,
+                    field_values=field_values,
+                    payload_by_id=payload_by_id,
+                    record_usage=record_usage,
+                    key_prefix="leaves:",
+                )
+                # Recover scalar leaves independently. Replacing a collection would invalidate
+                # concrete item identities, so collection recovery is performed at root level.
+                recover = [
+                    f
+                    for f in nested
+                    if f.field_type not in ("array", "object")
+                    and field_values[f.path].verification != VerificationStatus.SUPPORTED
+                ]
+                if recover and config.max_field_extra_attempts:
+                    await self._run_escalation(
+                        job=job,
+                        spec=nested_spec,
+                        fields_to_escalate=recover,
+                        field_values=field_values,
+                        payload_by_id=payload_by_id,
+                        unit_by_id=unit_by_id,
+                        record_usage=record_usage,
+                        key_prefix="leaves:",
+                    )
+                assembled = assemble_fields(field_values)
+                changed = []
+                for target in concrete:
+                    fv = field_values[target.path]
+                    _, reconciled = get_pointer(assembled, target.path)
+                    if fv.value != reconciled:
+                        fv.value = reconciled
+                        attempt = FieldCandidateAttempt(
+                            field_path=target.path,
+                            attempt_number=fv.attempt_count + 1,
+                            value=reconciled,
+                            sources=fv.sources,
+                            model_id=config.escalation_model,
+                            status="reconciled",
+                        )
+                        self._result_repo.record_field_attempt(job_id, attempt)
+                        fv.attempts.append(attempt)
+                        fv.attempt_count += 1
+                        changed.append(target)
+                if changed:
+                    await self._verify_fields(
+                        job=job,
+                        spec=spec.model_copy(update={"fields": changed}),
+                        field_values=field_values,
+                        payload_by_id=payload_by_id,
+                        record_usage=record_usage,
+                        key_prefix="reconciled:",
+                    )
+            spec = spec.model_copy(update={"fields": concrete})
+            progress.fields_total = len(concrete)
+
             # Step 10: Finalize Field Statuses and Result
             self._job_repo.update_job_progress(job_id, stage=JobStage.FINALIZING)
             unresolved_paths: list[str] = []
@@ -394,7 +757,7 @@ class ExtractionPipelineService:
                             fv.status = FieldStatus.VERIFIED
                         else:
                             fv.status = FieldStatus.UNRESOLVED
-                            fv.unresolved_reason = (
+                            fv.unresolved_reason = fv.unresolved_reason or (
                                 f"Verification returned {fv.verification or 'UNKNOWN'} "
                                 f"after {fv.attempt_count} attempt(s)."
                             )
@@ -410,7 +773,7 @@ class ExtractionPipelineService:
                         )
                     else:
                         fv.status = FieldStatus.UNRESOLVED
-                        fv.unresolved_reason = (
+                        fv.unresolved_reason = fv.unresolved_reason or (
                             "Field absence could not be verified."
                             if field_spec.nullable
                             else "Required non-nullable field not found in document."
@@ -418,8 +781,14 @@ class ExtractionPipelineService:
                         unresolved_paths.append(fv.path)
 
             progress.fields_completed = len(spec.fields)
+            schema_ok, _ = validate_data_against_schema(
+                project_partial_data(assemble_fields(field_values), spec.schema_json),
+                spec.schema_json,
+            )
             final_status = (
-                JobStatus.COMPLETED_WITH_UNRESOLVED if unresolved_paths else JobStatus.COMPLETED
+                JobStatus.COMPLETED_WITH_UNRESOLVED
+                if unresolved_paths or not schema_ok
+                else JobStatus.COMPLETED
             )
             self._result_repo.save_final_result(job_id, final_status, field_values)
             self._job_repo.update_job_progress(
@@ -434,8 +803,21 @@ class ExtractionPipelineService:
             return result
 
     def _load_unit_payloads(
-        self, units: list[DocumentUnit], instructions: str = ""
+        self,
+        units: list[DocumentUnit],
+        instructions: str = "",
+        max_prepared_bytes: int = 256 * 1024 * 1024,
     ) -> list[UnitInputPayload]:
+        refs = {
+            ref
+            for unit in units
+            for ref in [unit.native_text_ref, unit.image_ref, *unit.image_refs]
+            if ref
+        }
+        if sum(self._blob_store.get_size(ref) for ref in refs) > max_prepared_bytes:
+            raise DocumentLimitExceededError(
+                "Prepared document exceeds the job input memory budget."
+            )
         texts: list[str | None] = []
         for u in units:
             if u.native_text_ref:
@@ -498,21 +880,30 @@ class ExtractionPipelineService:
                 "pipeline.score_unit_relevance",
                 {"job_id": job.job_id, "unit_id": payload.unit.unit_id},
             ):
-                rel = await self._model_step(
-                    job.job_id,
-                    f"relevance:{payload.unit.unit_id}",
-                    RelevanceResult,
-                    lambda payload=payload: self._decision_engine.score_relevance(
-                        job_id=job.job_id,
-                        unit_payload=payload,
-                        fields=spec.fields,
-                        instructions=spec.instructions,
-                        model_id=config.decision_model,
-                        batch_questions=config.batch_relevance_questions,
-                    ),
-                )
-                self._result_repo.record_decisions(rel.decision_records)
-                record_usage(rel.usage)
+                width = 24 if config.batch_relevance_questions else 1
+                groups = [spec.fields[i : i + width] for i in range(0, len(spec.fields), width)]
+                rel = RelevanceResult(unit_id=payload.unit.unit_id)
+                for gi, group in enumerate(groups):
+                    key = f"relevance:{payload.unit.unit_id}"
+                    if len(groups) > 1:
+                        key += f":questions:{gi}"
+                    part = await self._model_step(
+                        job.job_id,
+                        key,
+                        RelevanceResult,
+                        partial(
+                            self._decision_engine.score_relevance,
+                            job_id=job.job_id,
+                            unit_payload=payload,
+                            fields=group,
+                            instructions=spec.instructions,
+                            model_id=config.decision_model,
+                            batch_questions=True,
+                        ),
+                    )
+                    self._result_repo.record_decisions(part.decision_records)
+                    record_usage(part.usage)
+                    rel.field_scores.update(part.field_scores)
 
                 max_s = 0.0
                 for f in spec.fields:
@@ -539,6 +930,17 @@ class ExtractionPipelineService:
 
         # Preserve original reading order
         ordered_selected = [p.unit.unit_id for p in unit_payloads if p.unit.unit_id in selected_set]
+        self._result_repo.save_step(
+            job.job_id,
+            "routing:selection",
+            {
+                "selected_unit_ids": ordered_selected,
+                "field_unit_scores": field_unit_scores,
+                "threshold": config.relevance_threshold,
+                "top_k": config.relevance_top_k,
+            },
+            None,
+        )
         return ordered_selected
 
     async def _determine_unit_modality(
@@ -589,6 +991,7 @@ class ExtractionPipelineService:
         field_values: dict[str, FieldValue],
         payload_by_id: dict[str, UnitInputPayload],
         record_usage: Any,
+        key_prefix: str = "",
     ) -> None:
         fields_to_verify: list[tuple[TargetFieldSpec, Any, list[Evidence]]] = []
         for field_spec in spec.fields:
@@ -602,16 +1005,12 @@ class ExtractionPipelineService:
             "pipeline.verify_fields",
             {"job_id": job.job_id, "fields_count": len(fields_to_verify)},
         ):
-            ver_batch = await self._model_step(
-                job.job_id,
-                "verify:initial",
-                VerificationBatchResult,
-                lambda: self._decision_engine.verify_fields(
-                    job_id=job.job_id,
-                    fields_to_verify=fields_to_verify,
-                    unit_payloads_by_id=payload_by_id,
-                    model_id=job.configuration.decision_model,
-                ),
+            ver_batch = await self._verify_bounded(
+                key=f"{key_prefix}verify:initial",
+                job_id=job.job_id,
+                fields_to_verify=fields_to_verify,
+                unit_payloads_by_id=payload_by_id,
+                model_id=job.configuration.decision_model,
             )
             self._result_repo.record_decisions(ver_batch.decision_records)
             record_usage(ver_batch.usage)
@@ -630,6 +1029,7 @@ class ExtractionPipelineService:
         payload_by_id: dict[str, UnitInputPayload],
         unit_by_id: dict[str, DocumentUnit],
         record_usage: Any,
+        key_prefix: str = "",
     ) -> None:
         config = job.configuration
         rich_inputs: list[tuple[UnitInputPayload, Modality]] = []
@@ -659,19 +1059,14 @@ class ExtractionPipelineService:
                     "fields_count": len(remaining),
                 },
             ):
-                esc_batch = await self._model_step(
-                    job.job_id,
-                    f"extract:escalation:{extra_idx}",
-                    ExtractionBatchResult,
-                    partial(
-                        self._extraction_engine.extract_fields,
-                        job_id=job.job_id,
-                        spec=spec,
-                        target_fields=remaining,
-                        unit_inputs=rich_inputs,
-                        model_id=model_to_use,
-                        stage_name="escalating",
-                    ),
+                esc_batch = await self._extract_bounded(
+                    key=f"{key_prefix}extract:escalation:{extra_idx}",
+                    job_id=job.job_id,
+                    spec=spec,
+                    target_fields=remaining,
+                    unit_inputs=rich_inputs,
+                    model_id=model_to_use,
+                    stage_name="escalating",
                 )
                 record_usage(esc_batch.usage)
 
@@ -702,16 +1097,12 @@ class ExtractionPipelineService:
                     verify_subset.append((f_spec, new_val, new_evidences))
 
                 if verify_subset:
-                    ver_res = await self._model_step(
-                        job.job_id,
-                        f"verify:escalation:{extra_idx}",
-                        VerificationBatchResult,
-                        lambda verify_subset=verify_subset: self._decision_engine.verify_fields(
-                            job_id=job.job_id,
-                            fields_to_verify=verify_subset,
-                            unit_payloads_by_id=payload_by_id,
-                            model_id=config.decision_model,
-                        ),
+                    ver_res = await self._verify_bounded(
+                        key=f"{key_prefix}verify:escalation:{extra_idx}",
+                        job_id=job.job_id,
+                        fields_to_verify=verify_subset,
+                        unit_payloads_by_id=payload_by_id,
+                        model_id=config.decision_model,
                     )
                     self._result_repo.record_decisions(ver_res.decision_records)
                     record_usage(ver_res.usage)
@@ -760,18 +1151,14 @@ class ExtractionPipelineService:
                 "review_units": len(review_inputs),
             },
         ):
-            cov_batch = await self._model_step(
-                job.job_id,
-                "extract:coverage",
-                ExtractionBatchResult,
-                lambda: self._extraction_engine.extract_fields(
-                    job_id=job.job_id,
-                    spec=spec,
-                    target_fields=missing_fields,
-                    unit_inputs=review_inputs,
-                    model_id=config.extraction_model,
-                    stage_name="reviewing_coverage",
-                ),
+            cov_batch = await self._extract_bounded(
+                key="extract:coverage",
+                job_id=job.job_id,
+                spec=spec,
+                target_fields=missing_fields,
+                unit_inputs=review_inputs,
+                model_id=config.extraction_model,
+                stage_name="reviewing_coverage",
             )
             record_usage(cov_batch.usage)
 
@@ -803,16 +1190,12 @@ class ExtractionPipelineService:
                 newly_populated.append((f_spec, new_val, evidences))
 
             if should_verify and newly_populated:
-                ver_res = await self._model_step(
-                    job.job_id,
-                    "verify:coverage",
-                    VerificationBatchResult,
-                    lambda: self._decision_engine.verify_fields(
-                        job_id=job.job_id,
-                        fields_to_verify=newly_populated,
-                        unit_payloads_by_id=payload_by_id,
-                        model_id=config.decision_model,
-                    ),
+                ver_res = await self._verify_bounded(
+                    key="verify:coverage",
+                    job_id=job.job_id,
+                    fields_to_verify=newly_populated,
+                    unit_payloads_by_id=payload_by_id,
+                    model_id=config.decision_model,
                 )
                 self._result_repo.record_decisions(ver_res.decision_records)
                 record_usage(ver_res.usage)
@@ -825,6 +1208,9 @@ class ExtractionPipelineService:
     ) -> None:
         field.verification = outcome.status
         field.raw_probabilities = outcome.raw_probabilities
+        field.unresolved_reason = (
+            outcome.rationale if (outcome.status != VerificationStatus.SUPPORTED) else None
+        )
         needs_citation = field.value is not None and field.value != [] and field.value != {}
         if outcome.status == VerificationStatus.SUPPORTED and (
             outcome.raw_probabilities.get("SUPPORTED", 0.0)
@@ -850,7 +1236,7 @@ class ExtractionPipelineService:
         for ev in evidences:
             uid = ev.unit_id
             unit = unit_by_id.get(uid)
-            if unit is None or uid not in default_unit_ids:
+            if unit is None or uid not in default_unit_ids or not unit.available_modalities:
                 continue
             locator = dict(ev.locator)
             locator.update(unit.source_locator)

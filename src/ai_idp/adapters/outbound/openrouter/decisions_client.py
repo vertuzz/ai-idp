@@ -18,7 +18,12 @@ from ai_idp.application.ports.protocols import (
     VerificationBatchResult,
 )
 from ai_idp.domain.enums import DecisionKind, Modality, VerificationStatus
-from ai_idp.domain.errors import ProviderError, RateLimitedError
+from ai_idp.domain.errors import (
+    ModelInputLimitExceededError,
+    PermanentProviderError,
+    ProviderError,
+    RateLimitedError,
+)
 from ai_idp.domain.models import (
     DecisionRecord,
     Evidence,
@@ -134,12 +139,18 @@ class OpenRouterDecisionEngine:
         max_retries: int = 3,
         timeout_seconds: float = 60.0,
         semaphore: asyncio.Semaphore | None = None,
+        limiter=None,
+        max_input_bytes: int = 20 * 1024 * 1024,
+        max_images: int = 8,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._max_retries = max_retries
         self._timeout = timeout_seconds
         self._semaphore = semaphore or asyncio.Semaphore(max_concurrent_requests)
+        self._limiter = limiter
+        self._max_input_bytes = max_input_bytes
+        self._max_images = max_images
 
     async def _post_decisions(
         self,
@@ -149,6 +160,11 @@ class OpenRouterDecisionEngine:
     ) -> tuple[dict[str, Any], int]:
         if not self._api_key:
             raise ProviderError("OPENROUTER_API_KEY is not configured.")
+        if (
+            sum(isinstance(part, dict) and part.get("type") == "image_url" for part in state)
+            > self._max_images
+        ):
+            raise ModelInputLimitExceededError("Decision request exceeds the model image limit.")
 
         url = f"{self._base_url}/alpha/decisions"
         headers = {
@@ -167,7 +183,16 @@ class OpenRouterDecisionEngine:
             for attempt in range(self._max_retries + 1):
                 t0 = time.perf_counter()
                 try:
-                    async with httpx.AsyncClient(timeout=self._timeout) as client:
+                    from ai_idp.adapters.outbound.openrouter.transport import LimitedTransport
+
+                    transport = (
+                        LimitedTransport(self._limiter, self._max_input_bytes)
+                        if self._limiter
+                        else None
+                    )
+                    async with httpx.AsyncClient(
+                        timeout=self._timeout, transport=transport
+                    ) as client:
                         resp = await client.post(url, headers=headers, json=payload)
                     latency_ms = int((time.perf_counter() - t0) * 1000)
 
@@ -182,14 +207,12 @@ class OpenRouterDecisionEngine:
                             await asyncio.sleep(0.8 * (2**attempt))
                             continue
                         raise ProviderError(
-                            f"OpenRouter Decisions API server error ({resp.status_code}): "
-                            f"{resp.text[:300]}"
+                            f"OpenRouter Decisions API server error ({resp.status_code})."
                         )
 
                     if resp.status_code >= 400:
-                        raise ProviderError(
-                            f"OpenRouter Decisions API error ({resp.status_code}): "
-                            f"{resp.text[:300]}"
+                        raise PermanentProviderError(
+                            f"OpenRouter Decisions API rejected the request ({resp.status_code})."
                         )
 
                     data = resp.json()
@@ -203,11 +226,9 @@ class OpenRouterDecisionEngine:
                     if attempt < self._max_retries:
                         await asyncio.sleep(0.8 * (2**attempt))
                         continue
-                    raise ProviderError(
-                        f"Network error calling OpenRouter Decisions API: {exc}"
-                    ) from exc
+                    raise ProviderError("Network error calling OpenRouter Decisions API.") from exc
 
-        raise ProviderError(f"Decision call failed after retries: {last_exc}")
+        raise ProviderError("Decision call failed after retries.") from last_exc
 
     def _build_usage_record(
         self,
@@ -255,7 +276,7 @@ class OpenRouterDecisionEngine:
                 "type": "noul",
                 "instructions": (
                     f"Can this document unit directly provide or materially clarify the value "
-                    f"of field '{f.name}'{desc}?"
+                    f"of field '{f.name}'{desc}? Field schema: {json.dumps(f.raw_schema)}"
                 ),
                 "criteria": {
                     "false": f"This unit does not contain or clarify the value of '{f.name}'.",
@@ -353,6 +374,7 @@ class OpenRouterDecisionEngine:
             tokens_out=total_out,
             estimated_cost_usd=round(total_cost, 8),
             latency_ms=total_lat,
+            call_count=len(key_to_field),
         )
         return RelevanceResult(
             unit_id=unit_payload.unit.unit_id,
@@ -369,7 +391,10 @@ class OpenRouterDecisionEngine:
         fields: list[TargetFieldSpec],
         model_id: str,
     ) -> ModalityResult:
-        field_summary = ", ".join(f"{f.name} ({f.description or f.field_type})" for f in fields)
+        field_summary = ", ".join(
+            f"{f.name} ({f.description or f.field_type}; schema={json.dumps(f.raw_schema)})"
+            for f in fields
+        )
         state = _build_unit_state(
             unit_payload,
             extra_context=f"Target extraction fields: {field_summary}",
@@ -410,7 +435,7 @@ class OpenRouterDecisionEngine:
         available = unit_payload.unit.available_modalities
         limitation: str | None = None
 
-        if available and chosen_modality not in available:
+        if chosen_modality not in available:
             limitation = (
                 f"Requested modality {chosen_modality.value} is unavailable; "
                 f"available={[m.value for m in available]}"
@@ -420,7 +445,7 @@ class OpenRouterDecisionEngine:
             elif Modality.VISION in available:
                 chosen_modality = Modality.VISION
             else:
-                chosen_modality = available[0]
+                chosen_modality = available[0] if available else Modality.TEXT
 
         decision = ModalityDecision(
             unit_id=unit_payload.unit.unit_id,
@@ -439,7 +464,14 @@ class OpenRouterDecisionEngine:
             model_id=returned_model,
             version="v1",
             scores=probs,
-            selected=chosen_modality.value,
+            selected={
+                "modality": chosen_modality.value,
+                "requested": chosen_str,
+                "available": [m.value for m in available],
+                "capability_limitation": limitation,
+            }
+            if limitation
+            else chosen_modality.value,
             latency_ms=latency_ms,
             tokens_in=usage.tokens_in,
             tokens_out=usage.tokens_out,
@@ -472,6 +504,9 @@ class OpenRouterDecisionEngine:
         ]
         questions: dict[str, Any] = {}
         key_to_field: dict[str, tuple[TargetFieldSpec, Any]] = {}
+        partial_scope = any(
+            p.verification_scope != "complete_document" for p in unit_payloads_by_id.values()
+        )
         for idx, (f_spec, val, evidences) in enumerate(fields_to_verify):
             q_key = f"verify_{idx}"
             key_to_field[q_key] = (f_spec, val)
@@ -485,10 +520,24 @@ class OpenRouterDecisionEngine:
             questions[q_key] = {
                 "type": "choice",
                 "instructions": (
-                    f"Verify whether the source document unit(s) support the extracted value "
+                    (
+                        "This is one bounded batch of a larger document. Inspect only this batch; "
+                        "ignore citations to units outside it. For a populated value, absence from "
+                        "this batch is INSUFFICIENT_EVIDENCE, not CONTRADICTED. A populated value "
+                        "is SUPPORTED only if the batch supports the entire value and its local "
+                        "citations. For null/empty values, SUPPORTED means absence in this batch; "
+                        "the application requires absence in every batch. "
+                        if partial_scope
+                        else ""
+                    )
+                    + f"Verify whether the source document unit(s) support the extracted value "
                     f"for field '{f_spec.name}' = {val_repr}.{desc_hint}{quote_hint} "
                     f"Field schema: {json.dumps(f_spec.raw_schema)}. Citations: {citations}. "
                     "Check the entire value, including every array item and object property. "
+                    "Honor the field schema and caller instructions, including any requirement "
+                    "to preserve exact printed string formatting, punctuation, and units. "
+                    "Source units can declare unavailable_images: their content was not rendered. "
+                    "Do not treat unavailable visual content as evidence of absence. "
                     "For null or an empty collection, SUPPORTED means the complete document "
                     "establishes absence; if the answer is present return CONTRADICTED, "
                     "and if absence cannot be established return INSUFFICIENT_EVIDENCE. "

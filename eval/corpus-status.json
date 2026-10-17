@@ -35,10 +35,10 @@
   },
   "unit_note": "PDF pages, image frames, and DOCX top-level XML body elements; DOCX elements are not physical pages or finalized ingestion blocks.",
   "annotation_status": {
-    "draft": 50,
-    "not_annotated": 70
+    "ai_reviewed": 120
   },
   "evaluation_ready": 0,
+  "ai_source_reviewed": 120,
   "remaining_reviews": [
     "Human field/evidence annotation review",
     "File-specific rights and privacy review",

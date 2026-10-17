@@ -79,11 +79,40 @@ def validate(cases, root=ROOT):
             )
             if annotation["case_id"] != name:
                 raise ValueError("Annotation case ID mismatch")
+            if case.get("annotation_status") == "ai_reviewed":
+                from scripts.review_corpus import validate_annotation
+
+                validate_annotation(annotation, name)
+                if annotation.get("review_status") != "ai_reviewed":
+                    raise ValueError("AI review status mismatch")
+                if annotation.get("reviewer_type") != "ai" or not annotation.get("review_notes"):
+                    raise ValueError("AI review provenance is missing")
+                if annotation.get("source_sha256") != case["sha256"]:
+                    raise ValueError("AI review source checksum mismatch")
+                if sha256(safe_path(root, case["annotation_path"])) != case.get(
+                    "ai_reviewed_annotation_sha256"
+                ):
+                    raise ValueError("AI review annotation checksum mismatch")
+                if case["evaluation_ready"]:
+                    raise ValueError("AI review must not impersonate human benchmark approval")
             for field in annotation["expected_fields"]:
                 if not field["path"].startswith("/"):
                     raise ValueError("Expected JSON Pointer field path")
             if case["evaluation_ready"] and annotation["review_status"] != "reviewed":
                 raise ValueError("Unreviewed annotation was marked evaluation-ready")
+            if case["evaluation_ready"]:
+                from scripts.review_corpus import validate_annotation
+
+                validate_annotation(annotation, name)
+                if (
+                    case.get("rights_status") != "reviewed"
+                    or case.get("group_review") != "reviewed"
+                ):
+                    raise ValueError("Rights/privacy and split-group reviews are incomplete")
+                if not annotation.get("reviewer_id") or not annotation.get("reviewed_at"):
+                    raise ValueError("Human review metadata is missing")
+                if annotation.get("source_sha256") != case["sha256"]:
+                    raise ValueError("Reviewed annotation source checksum mismatch")
         except Exception as error:
             errors.append(f"{name}: {error}")
     for group, splits in groups.items():
@@ -107,6 +136,7 @@ def validate(cases, root=ROOT):
         ),
         "annotation_status": dict(Counter(c["annotation_status"] for c in cases)),
         "evaluation_ready": sum(c["evaluation_ready"] for c in cases),
+        "ai_source_reviewed": sum(c.get("annotation_status") == "ai_reviewed" for c in cases),
         "remaining_reviews": [
             "Human field/evidence annotation review",
             "File-specific rights and privacy review",

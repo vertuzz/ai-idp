@@ -8,34 +8,74 @@ from typing import Any
 import jsonschema
 
 from ai_idp.domain.errors import InvalidSchemaError
+from ai_idp.domain.field_paths import escape_segment
 from ai_idp.domain.models import ExtractionSpecification, TargetFieldSpec
 
 UNSUPPORTED_SCHEMA_KEYWORDS = frozenset(
-    {"$ref", "$dynamicRef", "oneOf", "not", "patternProperties"}
+    {
+        "$ref",
+        "$dynamicRef",
+        "oneOf",
+        "anyOf",
+        "allOf",
+        "not",
+        "patternProperties",
+        "if",
+        "then",
+        "else",
+        "prefixItems",
+        "dependentSchemas",
+        "unevaluatedProperties",
+    }
 )
 MAX_SCHEMA_DEPTH = 6
 MAX_SCHEMA_PROPERTIES = 100
 
 
-def _check_schema_node(node: Any, depth: int = 0) -> None:
+def _check_schema_node(node: Any, depth: int = 0, path_bytes: int = 0) -> None:
     if depth > MAX_SCHEMA_DEPTH:
         raise InvalidSchemaError(f"JSON Schema exceeds maximum nesting depth ({MAX_SCHEMA_DEPTH}).")
+    if path_bytes > 240:
+        raise InvalidSchemaError("JSON Pointer paths exceed the supported storage length.")
     if not isinstance(node, dict):
         return
     for kw in UNSUPPORTED_SCHEMA_KEYWORDS:
         if kw in node:
             raise InvalidSchemaError(f"Unsupported JSON Schema keyword: '{kw}'.")
+    types = node.get("type")
+    if isinstance(types, list) and len([t for t in types if t != "null"]) > 1:
+        raise InvalidSchemaError("Only nullable unions with one non-null type are supported.")
+    type_list = types if isinstance(types, list) else [types]
+    if types is None:
+        raise InvalidSchemaError("Each schema node requires an explicit type.")
+    if node.get("additionalProperties") not in (None, False):
+        raise InvalidSchemaError("Open object schemas are unsupported; define explicit properties.")
+    if "object" in type_list and not node.get("properties"):
+        raise InvalidSchemaError("Object schemas require explicit non-empty properties.")
+    if "array" in type_list and not isinstance(node.get("items"), dict):
+        raise InvalidSchemaError("Arrays require an explicit item schema.")
+    for key in ("$defs", "definitions"):
+        children = node.get(key)
+        for child in children.values() if isinstance(children, dict) else []:
+            _check_schema_node(child, depth + 1)
+    for key in ("additionalProperties", "contains", "propertyNames", "unevaluatedItems"):
+        if isinstance(node.get(key), dict):
+            _check_schema_node(node[key], depth + 1)
     props = node.get("properties")
     if isinstance(props, dict):
         if len(props) > MAX_SCHEMA_PROPERTIES:
             raise InvalidSchemaError(
                 f"JSON Schema object exceeds maximum property count ({MAX_SCHEMA_PROPERTIES})."
             )
-        for sub in props.values():
-            _check_schema_node(sub, depth + 1)
+        for name, sub in props.items():
+            if not isinstance(sub, dict):
+                raise InvalidSchemaError("Boolean property schemas are unsupported.")
+            _check_schema_node(
+                sub, depth + 1, path_bytes + 1 + len(escape_segment(name).encode("utf-8"))
+            )
     items = node.get("items")
     if isinstance(items, dict):
-        _check_schema_node(items, depth + 1)
+        _check_schema_node(items, depth + 1, path_bytes + 12)
 
 
 def _resolve_type_info(prop_schema: dict[str, Any]) -> tuple[str, bool, bool]:
@@ -61,6 +101,10 @@ def normalize_extraction_schema(
     """Validate a caller JSON Schema and normalize it into TargetFieldSpec entries."""
     if not isinstance(schema_json, dict):
         raise InvalidSchemaError("Schema must be a JSON object.")
+
+    _check_schema_node(schema_json, depth=0)
+    if len(json.dumps(schema_json).encode("utf-8")) > 256 * 1024:
+        raise InvalidSchemaError("JSON Schema exceeds the 256 KiB input limit.")
 
     try:
         jsonschema.Draft202012Validator.check_schema(schema_json)
@@ -95,7 +139,7 @@ def normalize_extraction_schema(
                     description = f"Array of objects with fields: {item_names}"
         fields.append(
             TargetFieldSpec(
-                path=f"/{prop_name}",
+                path=f"/{escape_segment(prop_name)}",
                 name=prop_name,
                 field_type=field_type,
                 description=description,
@@ -128,7 +172,8 @@ def validate_data_against_schema(
     """Validate extracted data dictionary against the caller's JSON Schema."""
     validator = jsonschema.Draft202012Validator(schema_json)
     errors = [
-        f"{'/'.join(str(p) for p in err.absolute_path) or '<root>'}: {err.message}"
+        f"/{'/'.join(escape_segment(str(p)) for p in err.absolute_path)}: "
+        f"failed {err.validator} validation"
         for err in validator.iter_errors(data)
     ]
     return len(errors) == 0, errors

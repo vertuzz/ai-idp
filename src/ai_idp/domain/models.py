@@ -73,7 +73,7 @@ with warnings.catch_warnings():
 
     class ExtractionSpecification(BaseModel):
         spec_id: str
-        schema_json: dict[str, Any]
+        schema_json: dict[str, Any]  # type: ignore[assignment]
         schema_hash: str
         instructions: str = ""
         fields: list[TargetFieldSpec] = Field(default_factory=list)
@@ -162,6 +162,7 @@ class UsageRecord(BaseModel):
     tokens_out: int = 0
     estimated_cost_usd: float = 0.0
     latency_ms: int = 0
+    call_count: int = 1
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -193,6 +194,15 @@ class PipelineConfiguration(BaseModel):
     max_coverage_reviews: int = 1
     max_job_estimated_cost_usd: float = 10.0
     batch_relevance_questions: bool = True
+    pipeline_version: str = "v2"
+    max_job_seconds: float = 600
+    max_model_calls: int = 250
+    max_model_input_bytes: int = 20 * 1024 * 1024
+    max_units_per_call: int = 12
+    max_decision_images_per_call: int = 8
+    max_prepared_input_bytes: int = 256 * 1024 * 1024
+    model_parameters: dict[str, Any] = Field(default_factory=dict)
+    prompt_versions: dict[str, str] = Field(default_factory=dict)
 
 
 class ExtractionRun(BaseModel):
@@ -215,6 +225,7 @@ class ExtractionResult(BaseModel):
     status: JobStatus
     data: dict[str, Any] = Field(default_factory=dict)
     schema_valid: bool = False
+    schema_errors: list[str] = Field(default_factory=list)
     fields: dict[str, FieldValue] = Field(default_factory=dict)
     unresolved_fields: list[str] = Field(default_factory=list)
     usage: UsageSummary = Field(default_factory=UsageSummary)

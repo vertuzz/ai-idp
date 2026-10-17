@@ -1,6 +1,6 @@
 # 12 — Evaluation Corpus: 120-Document Pilot
 
-**Status:** approved target design; all 120 candidate files are now acquired. Fifty cases have draft answer keys; 70 still require field annotation. Human review, final rights/group adjudication and benchmark freeze remain pending. See the [actual corpus catalog](../eval/CORPUS.md). This document remains the authoritative preparation policy.
+**Status:** all 120 candidate files and owner-authorized AI source reviews are available. These support local MVP assessment. Independent human field/evidence review, final rights/group adjudication and research benchmark freeze remain separate gates. See the [actual corpus catalog](../eval/CORPUS.md) and [AI review scope](15-ai-source-review.md). This document remains the preparation policy.
 
 The initial evaluation corpus must be prepared **before substantial application implementation**. It will drive development with real examples rather than post-hoc benchmarking. The project remains public, Apache-2.0-licensed, general-purpose and potentially suitable for future commercial services. Source datasets retain their **own** licences.
 
@@ -176,8 +176,8 @@ Report source-specific metrics; do not let easily scored CORD receipts hide a ro
 9. Add new datasets later through a separate, versioned corpus release; do not silently replace pilot samples.
 
 **Current project status:** all 120 candidate source identities and files exist, with SHA-256,
-provenance and proposed 72/24/24 splits. Fifty draft annotations and 70 annotation work items
-are available locally. No reviewed ground-truth suite or real benchmark results are claimed.
+provenance and proposed 72/24/24 splits. All 120 draft annotations are available locally.
+No reviewed ground-truth suite or real benchmark results are claimed.
 
 ## 8. Public repository and legal policy
 

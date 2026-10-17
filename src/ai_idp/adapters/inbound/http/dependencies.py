@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 
-from ai_idp.adapters.outbound.documents.composite_reader import CompositeDocumentReader
+from ai_idp.adapters.outbound.documents.isolated_reader import IsolatedDocumentReader
 from ai_idp.adapters.outbound.openrouter.decisions_client import OpenRouterDecisionEngine
 from ai_idp.adapters.outbound.openrouter.extraction_client import PydanticAIExtractionEngine
 from ai_idp.adapters.outbound.persistence.database import (
@@ -11,6 +11,7 @@ from ai_idp.adapters.outbound.persistence.database import (
     build_session_factory,
     init_db_schema,
 )
+from ai_idp.adapters.outbound.persistence.model_limiter import DatabaseModelLimiter
 from ai_idp.adapters.outbound.persistence.repositories import (
     SqlAlchemyJobRepository,
     SqlAlchemyResultRepository,
@@ -65,26 +66,45 @@ def build_container(
     session_factory = build_session_factory(engine)
 
     blob_store = LocalDocumentBlobStore(cfg.local_storage_root)
-    document_reader = CompositeDocumentReader.from_settings(cfg)
-    telemetry = OpenTelemetryJsonlAdapter(cfg.local_telemetry_root)
+    document_reader = IsolatedDocumentReader(cfg)
+    telemetry = OpenTelemetryJsonlAdapter(
+        cfg.local_telemetry_root,
+        max_bytes=cfg.telemetry_max_mib * 1024 * 1024,
+        retained_files=cfg.telemetry_retained_files,
+    )
 
     model_semaphore = asyncio.Semaphore(cfg.max_concurrent_model_requests)
+    limiter = DatabaseModelLimiter(
+        session_factory,
+        global_limit=cfg.max_concurrent_model_requests,
+        per_model=cfg.per_model_concurrency,
+        requests_per_minute=cfg.model_requests_per_minute,
+        lease_seconds=cfg.provider_timeout_seconds + 30,
+    )
     dec_engine = decision_engine or OpenRouterDecisionEngine(
+        max_input_bytes=cfg.max_model_input_bytes,
         api_key=cfg.openrouter_api_key,
         base_url=cfg.openrouter_base_url,
         max_concurrent_requests=cfg.max_concurrent_model_requests,
         max_retries=cfg.max_provider_retries,
         semaphore=model_semaphore,
+        limiter=limiter,
+        timeout_seconds=cfg.provider_timeout_seconds,
+        max_images=cfg.max_decision_images_per_call,
     )
     ext_engine = extraction_engine or PydanticAIExtractionEngine(
+        max_input_bytes=cfg.max_model_input_bytes,
         api_key=cfg.openrouter_api_key,
         base_url=cfg.openrouter_base_url,
         max_concurrent_requests=cfg.max_concurrent_model_requests,
         max_retries=cfg.max_provider_retries,
         semaphore=model_semaphore,
+        limiter=limiter,
+        timeout_seconds=cfg.provider_timeout_seconds,
+        max_output_tokens=cfg.max_output_tokens,
     )
 
-    job_repo = SqlAlchemyJobRepository(session_factory)
+    job_repo = SqlAlchemyJobRepository(session_factory, cfg.max_concurrent_jobs)
     result_repo = SqlAlchemyResultRepository(session_factory)
 
     pipeline_service = ExtractionPipelineService(

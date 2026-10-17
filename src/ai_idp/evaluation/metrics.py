@@ -5,34 +5,20 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ai_idp.domain.enums import VerificationStatus
+from ai_idp.domain.field_paths import get_pointer
 from ai_idp.domain.models import Evidence, ExtractionResult
 
 
 def resolve_json_pointer(data: Any, pointer: str) -> tuple[bool, Any]:
     """Resolve a JSON Pointer (e.g. '/items/0/name') against extracted data."""
-    if not pointer or pointer == "/":
-        return True, data
-    parts = pointer.lstrip("/").split("/")
-    current = data
-    for part in parts:
-        if isinstance(current, dict):
-            if part not in current:
-                return False, None
-            current = current[part]
-        elif isinstance(current, list):
-            try:
-                idx = int(part)
-            except ValueError:
-                return False, None
-            if idx < 0 or idx >= len(current):
-                return False, None
-            current = current[idx]
-        else:
-            return False, None
-    return True, current
+    return get_pointer(data, pointer)
 
 
 def normalize_scalar(val: Any) -> Any:
+    if isinstance(val, list):
+        return [normalize_scalar(item) for item in val]
+    if isinstance(val, dict):
+        return {key: normalize_scalar(item) for key, item in val.items()}
     if val is None:
         return None
     if isinstance(val, bool):
@@ -143,6 +129,17 @@ class CaseEvaluationSummary:
     llm_calls: int = 0
     estimated_cost_usd: float = 0.0
     latency_ms: int = 0
+    preparation_ms: int = 0
+    failure_reason: str | None = None
+    evidence_units_expected: int = 0
+    evidence_units_selected: int = 0
+    selected_units: int = 0
+    units_total: int = 0
+    recovered_fields: int = 0
+    escalated_fields: int = 0
+    missing_expected: int = 0
+    missing_correct: int = 0
+    verification_confusion: dict[str, int] = field(default_factory=dict)
     field_details: list[FieldScoreDetail] = field(default_factory=list)
 
     @property
@@ -187,16 +184,29 @@ def score_extraction_result(
         expected_val = exp_item.get("value")
         expected_sources = exp_item.get("sources") or []
 
-        _found, extracted_val = resolve_json_pointer(result.data, path)
+        found, extracted_val = resolve_json_pointer(result.data, path)
+        fv = result.fields.get(path)
+        if not found and fv is not None and fv.value is None:
+            found = True  # Explicit internal absence can omit an optional non-null property.
         exact_ok, norm_ok = values_match(extracted_val, expected_val)
+        exact_ok, norm_ok = exact_ok and found, norm_ok and found
 
-        top_path = "/" + path.lstrip("/").split("/")[0]
-        fv = result.fields.get(path) or result.fields.get(top_path)
         ext_sources = fv.sources if fv else []
         ver_status = fv.verification.value if (fv and fv.verification) else None
 
         ev_ok = evidence_matches(ext_sources, expected_sources)
         false_sup = (ver_status == VerificationStatus.SUPPORTED.value) and not norm_ok
+        confusion_key = f"{ver_status or 'UNVERIFIED'}:{'correct' if norm_ok else 'incorrect'}"
+        summary.verification_confusion[confusion_key] = (
+            summary.verification_confusion.get(confusion_key, 0) + 1
+        )
+        if expected_val is None:
+            summary.missing_expected += 1
+            summary.missing_correct += int(found and extracted_val is None)
+        if fv and len(fv.attempts) > 1:
+            summary.escalated_fields += 1
+            _, initially_correct = values_match(fv.attempts[0].value, expected_val)
+            summary.recovered_fields += int(norm_ok and not initially_correct)
 
         summary.fields_total += 1
         if exact_ok:

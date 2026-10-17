@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "record_id": {"type": "string", "description": "Final current-period record identifier"},
+    "approved_total": {"type": "integer", "description": "Final approved current-period total"},
+    "purchase_order_reference": {
+      "type": ["string", "null"],
+      "description": "Purchase-order reference; null if absent from the document"
+    }
+  },
+  "required": ["record_id", "approved_total", "purchase_order_reference"],
+  "additionalProperties": false
+}

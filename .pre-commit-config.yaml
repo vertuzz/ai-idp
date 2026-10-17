@@ -26,6 +26,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: domain-types
+        name: Domain and port type checks
+        entry: uv run --locked --group dev python -m mypy
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: detect-secrets
         name: Secrets scan (offline)
         entry: uv run --locked --group dev python -m detect_secrets.pre_commit_hook --no-verify --filter scripts.secret_filters.is_public_corpus_hash

@@ -15,7 +15,7 @@ The initial **target** is **120 documents**, covering a planning estimate of rou
 
 The exact source selection, licensing/redistribution checks, annotation conventions, 72/24/24 split, dataset preparation, verification counterfactuals and execution procedure are fully specified in **[12 — Evaluation Corpus](12-evaluation-corpus.md)**. The machine-readable target plan is [eval/corpus-plan.yaml](../eval/corpus-plan.yaml).
 
-**Status: all 120 candidate files are acquired; annotation/review is incomplete.** Fifty cases have draft answer keys and 70 await extraction annotation. A 24-case development preview is selected, but no case is yet marked evaluation-ready. See the [live corpus catalog](../eval/CORPUS.md). Complete rights, group and human annotation review before final freeze and model comparisons.
+**Status: all 120 candidate files and owner-authorized AI source reviews are available.** Development diagnostics use these local references. Independent human benchmark approval, rights and final group adjudication remain separate research/release gates. See the [live corpus catalog](../eval/CORPUS.md) and [AI review scope](15-ai-source-review.md).
 
 ## Central research question
 

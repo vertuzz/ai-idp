@@ -16,12 +16,14 @@ def main():
     preview = set(
         json.loads((ROOT / "eval/preview-selection.json").read_text(encoding="utf-8"))["case_ids"]
     )
+    annotations = Counter(c["annotation_status"] for c in cases)
+    ready = sum(bool(c["evaluation_ready"]) for c in cases)
     lines = [
         "# Candidate corpus v1",
         "",
         "All 120 primary documents are present and pass file integrity checks.",
-        "This is a complete file collection with pending annotation review, "
-        "not a finished gold benchmark.",
+        "Local AI source reviews support development diagnostics. "
+        "Independent human benchmark approval is not claimed.",
         "",
         "| Source | Files | Development | Calibration | Holdout |",
         "|---|---:|---:|---:|---:|",
@@ -43,8 +45,10 @@ def main():
             "DOCX physical pages are not assumed; "
             "semantic block IDs will be assigned during ingestion.",
             "",
-            "**Readiness:** 50 draft answer keys, 70 unannotated cases, "
-            "0 human-reviewed evaluation-ready cases.",
+            f"**Readiness:** {annotations['draft']} draft answer keys, "
+            f"{annotations['ai_reviewed']} locally AI-reviewed answer keys, "
+            f"{annotations['not_annotated']} unannotated cases, "
+            f"{ready} human-reviewed evaluation-ready cases.",
             "**Splits:** proposed 72/24/24 allocation; recorded groups do not cross splits. "
             "Final template/near-duplicate review remains pending.",
             "**Rights:** dataset/publisher licence references recorded; "

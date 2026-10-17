@@ -2,7 +2,7 @@
 
 ## Worker topology
 
-Run an HTTP API process and a separate worker process against the same PostgreSQL instance. Initially one worker deployment with two concurrently active document jobs and a global semaphore of six in-flight model requests. Expose per-model concurrency/rate limits as configuration.
+Run an HTTP API process and separate workers against the same PostgreSQL instance and storage. PostgreSQL coordinates the default two active jobs, six in-flight provider requests, per-model concurrency and request pacing across processes. Configure consistent limits for all processes. An additional local semaphore bounds each process. See [current operational semantics](13-operations-and-release.md).
 
 The queue is PostgreSQL-backed with SKIP LOCKED leases and heartbeat/reclaim semantics, detailed in [the data model](07-data-model.md). Do not hold row locks during network calls.
 

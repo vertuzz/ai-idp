@@ -183,6 +183,7 @@ class UsageRecordRow(Base):
     tokens_out: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     estimated_cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    call_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now
     )
@@ -209,3 +210,18 @@ class EvaluationRunRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now
     )
+
+
+class ModelRequestLeaseRow(Base):
+    __tablename__ = "model_request_leases"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
+
+
+class ModelRateStateRow(Base):
+    __tablename__ = "model_rate_states"
+    model_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    next_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,6 +28,7 @@ class DocumentDetailResponse(BaseModel):
     bytes: int
     status: str
     units_count: int
+    conversion_warnings: list[str] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -36,8 +37,10 @@ class CreateExtractionRequest(BaseModel):
 
     document_id: str
     schema_def: dict[str, Any] = Field(alias="schema")
-    instructions: str = ""
-    model_profile: str = "default"
+    instructions: str = Field(default="", max_length=16000)
+    model_profile: Literal["default", "always_vision", "text_only", "decision_no_verify"] = (
+        "default"
+    )
 
 
 class JobLinks(BaseModel):
@@ -62,6 +65,9 @@ class JobProgressResponse(BaseModel):
 class JobUsageResponse(BaseModel):
     llm_calls: int
     estimated_cost_usd: float
+    tokens_in: int = 0
+    tokens_out: int = 0
+    total_latency_ms: int = 0
 
 
 class JobStatusResponse(BaseModel):
@@ -72,6 +78,7 @@ class JobStatusResponse(BaseModel):
     progress: JobProgressResponse
     usage: JobUsageResponse
     last_error: str | None = None
+    configuration: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 
@@ -83,6 +90,17 @@ class EvidenceItemResponse(BaseModel):
     bounding_box: dict[str, Any] | None = None
 
 
+class FieldAttemptResponse(BaseModel):
+    attempt_number: int
+    value: Any = None
+    sources: list[EvidenceItemResponse]
+    model_id: str
+    modality: str | None = None
+    status: str
+    error: str | None = None
+    created_at: datetime
+
+
 class FieldResultItemResponse(BaseModel):
     status: str
     verification: str | None = None
@@ -90,6 +108,7 @@ class FieldResultItemResponse(BaseModel):
     sources: list[EvidenceItemResponse] = Field(default_factory=list)
     attempt_count: int = 1
     unresolved_reason: str | None = None
+    attempts: list[FieldAttemptResponse] = Field(default_factory=list)
 
 
 class ExtractionResultResponse(BaseModel):
@@ -97,6 +116,7 @@ class ExtractionResultResponse(BaseModel):
     status: str
     data: dict[str, Any]
     schema_valid: bool
+    schema_errors: list[str] = Field(default_factory=list)
     fields: dict[str, FieldResultItemResponse]
     unresolved_fields: list[str]
     usage: JobUsageResponse
@@ -118,3 +138,6 @@ class DecisionItemResponse(BaseModel):
 class DecisionsListResponse(BaseModel):
     job_id: str
     decisions: list[DecisionItemResponse]
+    offset: int = 0
+    limit: int = 100
+    next_offset: int | None = None

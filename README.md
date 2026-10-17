@@ -4,7 +4,7 @@ AI-IDP is an open-source, general-purpose Intelligent Document Processing (IDP) 
 
 The project begins as a self-hosted HTTP API and may later evolve into a production service or SaaS product. It is **not specific to any industry, employer, or proprietary document workflow**.
 
-**Status:** The core backend, HTTP API (`/v1`), PostgreSQL leasing queue, document readers, OpenRouter adapters, field verification/recovery, telemetry, and evaluation harness are implemented. Regression tests cover incomplete model responses, full-context verification, embedded images, exclusive execution and crash recovery; live development-document runs are diagnostics, not a reviewed benchmark. All 120 candidate corpus files are acquired, with provenance, checksums and draft 72/24/24 splits. Fifty cases have draft answer keys; 70 await field annotation. Human review and final benchmark freeze are pending.
+**Status:** The self-hosted backend implements the HTTP API, durable queue, isolated document decoding, nested-field evidence/verification, bounded extraction and source-batch verification, shared model limits, request/spend/time budgets, diagnostics and evaluation reports. All 120 source files now have owner-authorized AI source reviews covering 1,024 reference fields. Development comparisons use these local AI-reviewed references; independent human benchmark approval and redistribution clearance are not claimed. See [AI review scope](docs/15-ai-source-review.md) and [operations](docs/13-operations-and-release.md).
 
 **License:** [Apache License 2.0](LICENSE). Contributions and dependencies must be compatible with permissive open-source distribution.
 
@@ -20,6 +20,7 @@ docker compose up -d postgres
 uv run python -m alembic upgrade head
 uv run --group dev --group evaluation python -m pytest -q
 uv run python -m ruff check .
+uv run --locked python -m mypy
 ~~~
 
 Start the HTTP API and background worker locally:
@@ -35,18 +36,29 @@ Prepare/validate the 120-file evaluation corpus and run opt-in live model checks
 uv run --group evaluation python -m scripts.prepare_corpus
 uv run --group evaluation python -m scripts.validate_corpus
 uv run --group evaluation python -m scripts.smoke_models
-uv run python -m ai_idp.evaluation.runner --case-id synthetic-native-01 --case-id synthetic-scan-01 --case-id synthetic-mixed-01 --case-id synthetic-docx-01 --case-id cord-v2-train-0000 --limit 5 --profile default --profile always_vision
+uv run --locked python -m ai_idp.evaluation.runner --live --allow-draft --max-total-cost-usd 0.50 --case-id synthetic-native-01 --case-id synthetic-scan-01 --case-id synthetic-mixed-01 --case-id synthetic-docx-01 --case-id cord-v2-train-0000 --limit 5 --profile default --profile always_vision
 ~~~
 
 Python 3.13 is selected through `.python-version`. Original external files remain in ignored `eval/downloads/`. The corpus contains 70 PDFs, 20 DOCX files and 30 receipt PNGs; counterpart images do not count again. See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md).
 
-Apply `alembic upgrade head` to existing databases before starting the updated API/worker. Model inputs are sent without character truncation: routing receives full document text as context, and verification receives all prepared source units and complete candidate values. Provider context limits fail explicitly; content is never silently removed to fit.
+Apply `alembic upgrade head` to existing databases before starting the updated API/worker. Docker Compose runs migrations before API/worker startup. Model inputs are never silently truncated: extraction uses bounded unit groups and model-led candidate merges, and verification inspects all source batches with complete candidate values. Single-unit, request-size and provider context limits fail explicitly. Absence requires support across every source batch.
 
-DOCX blocks retain every embedded image. Since an embedded image is not a rendered Word page, the `always_vision` profile preserves semantic text alongside images for DOCX; it is a complete semantic-input baseline for that format, not an office-layout rendering.
+DOCX blocks retain every embedded image. Unsupported embedded formats such as EMF are exposed as conversion warnings and are not sent as PNG inputs; absence remains unresolved when such images are unavailable. Since an embedded image is not a rendered Word page, the `always_vision` profile preserves semantic text alongside supported images for DOCX. Office-faithful page rendering remains deferred.
 
 All execution paths, including `run_inline=true` and evaluations, take renewable exclusive job leases. Finished model calls are checkpointed with their usage and reused on retry. A crash between a provider response and durable checkpoint storage can still require repeating that call; spending limits are estimates checked before each new call and after reported usage, not hard provider billing caps.
 
-PostgreSQL concurrency and recovery regressions are opt-in: set `AI_IDP_TEST_POSTGRES_URL` to a development database and run `uv run --group dev --group evaluation python -m pytest -q tests/integration/test_postgres_leases.py`. Tests migrate and remove their own isolated schemas and make no model calls.
+PostgreSQL concurrency and recovery regressions are opt-in: set `AI_IDP_TEST_POSTGRES_URL` to a development database and run `uv run --group dev --group evaluation python -m pytest -q tests/integration/test_postgres_leases.py`. Tests migrate and remove their own isolated schemas and make no model calls. CI configures offline tests on Windows, Linux and macOS and a separate PostgreSQL job.
+
+For a complete client example, start API and worker and run:
+
+~~~text
+uv run --locked python examples/extract.py eval/fixtures/synthetic/synthetic-native-01.pdf --schema examples/record.schema.json
+~~~
+
+This submits paid model work. The script uploads, submits, polls and prints the result.
+Inspect the API at `http://127.0.0.1:8000/docs`. Field verification and `schema_valid`
+are separate: schema-valid data may remain unverified. Nested JSON Pointers, candidate
+history, source text/images and paginated decisions are available for inspection.
 
 ## Core ideas
 
@@ -63,7 +75,7 @@ PostgreSQL concurrency and recovery regressions are opt-in: set `AI_IDP_TEST_POS
 - OpenRouter for decision and generative model calls. Baseline configuration: `perplexity/pplx-decider-v1.2` for decisions, `anthropic/claude-haiku-5.5` for primary extraction, and `google/gemini-4-argon` for escalation; all model IDs remain independently configurable.
 - PyMuPDF for PDF text, metadata, and page rendering; Mammoth for lightweight DOCX-to-semantic-HTML extraction; Pillow for PNG, JPEG, and multi-frame TIFF inputs.
 - PostgreSQL for jobs, checkpoints, evaluations, and a `SKIP LOCKED` leasing queue; local filesystem for original files and derived artifacts.
-- OpenTelemetry SDK for spans and events, exported to rotating local JSONL (`telemetry/spans.jsonl`).
+- OpenTelemetry SDK for spans and events, exported to rotating per-process JSONL (`telemetry/spans-*.jsonl`).
 - pytest and reproducible, labeled real-model evaluation runs. The **120-file candidate corpus** is acquired: DocLayNet (35), CORD v2 (30), UK government PDFs (20), UK government DOCX (15), and synthetic stress files (20). Label review is pending; see [corpus status](eval/CORPUS.md) and [preparation policy](docs/12-evaluation-corpus.md).
 
 ## Scope
@@ -97,6 +109,7 @@ Deterministic **mechanical** operations are still required: parsing files, rende
 | [120-document evaluation corpus](docs/12-evaluation-corpus.md) | Exact quotas, sources, licensing, annotation and data splits |
 | [Implementation plan](docs/10-implementation-plan.md) | Ordered milestones and definition of done |
 | [Decisions](docs/11-decisions-and-open-questions.md) | Architectural decisions and unresolved questions |
+| [Operations and release gates](docs/13-operations-and-release.md) | Deployment, limits, schemas, backup/restore, human review and acceptance |
 
 ## Public-project rules
 

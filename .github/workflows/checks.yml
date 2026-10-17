@@ -1,0 +1,39 @@
+name: Checks
+on: [push, pull_request]
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --group dev --group evaluation
+      - run: uv run --locked python -m ruff check .
+      - run: uv run --locked python -m ruff format --check .
+      - run: uv run --locked python -m mypy
+      - run: uv run --locked python -m pytest -q
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ai_idp
+          POSTGRES_PASSWORD: test_only # pragma: allowlist secret
+          POSTGRES_DB: ai_idp
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Public credential for the isolated, disposable CI database.
+      AI_IDP_TEST_POSTGRES_URL: postgresql+psycopg://ai_idp:test_only@localhost:5432/ai_idp # pragma: allowlist secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --group dev --group evaluation
+      - run: uv run --locked python -m pytest -q tests/integration/test_postgres_leases.py

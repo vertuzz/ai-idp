@@ -2,6 +2,22 @@
 
 This plan orders work so that model behavior is exercised against real documents before the pipeline grows complex. Each milestone includes runnable tests and documentation.
 
+## Current completion boundary
+
+M1–M5 and the engineering portion of M6 have implementations and automated coverage,
+including nested leaf diagnostics, bounded grouping, shared model limits, isolated decoding,
+durable recovery and client inspection. Development model comparisons exercise both the
+decision-led and always-vision profiles. Cross-platform CI is configured; its remote results
+must be checked separately from local Windows and Linux-container validation.
+
+The owner subsequently accepted [AI source review](15-ai-source-review.md) for local MVP
+assessment. All 120 reference sets were checked and corrected with explicit AI provenance.
+Independent human benchmark acceptance remains a separate research gate.
+
+The independent human portion of M0/M6 remains open: no automatic tool may
+substitute for human field/evidence, rights/privacy and split-group review. The 120 source
+identities are unchanged. See [the release gates and review workflow](13-operations-and-release.md).
+
 ## M0 — Curate the evaluation corpus (before substantial application implementation)
 
 - Adopt [the 120-document corpus plan](12-evaluation-corpus.md) and [machine-readable source quotas](../eval/corpus-plan.yaml).

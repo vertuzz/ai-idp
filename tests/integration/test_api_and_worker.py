@@ -279,7 +279,11 @@ def test_http_api_worker_escalation_and_document_reuse(tmp_path: Path):
     dup_resp = client.post(
         "/v1/extractions",
         headers={"Idempotency-Key": "idem-key-001"},
-        json={"document_id": doc_id, "schema": schema_1},
+        json={
+            "document_id": doc_id,
+            "schema": schema_1,
+            "instructions": "Extract current period values.",
+        },
     )
     assert dup_resp.status_code == 202
     assert dup_resp.json()["job_id"] == job_id

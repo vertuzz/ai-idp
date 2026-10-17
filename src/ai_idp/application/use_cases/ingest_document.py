@@ -106,7 +106,13 @@ class IngestDocumentUseCase:
             self._job_repo.save_document(document)
 
             if eager_normalize:
-                units = self._document_reader.normalize(document, raw_bytes, self._blob_store)
+                try:
+                    units = self._document_reader.normalize(document, raw_bytes, self._blob_store)
+                except Exception:
+                    document.status = DocumentStatus.FAILED
+                    self._job_repo.save_document(document)
+                    self._blob_store.delete(storage_key)
+                    raise
                 self._job_repo.save_units(doc_id, units)
                 document.status = DocumentStatus.PREPARED
                 self._job_repo.save_document(document)
