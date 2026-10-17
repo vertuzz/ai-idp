@@ -33,3 +33,8 @@ eval-results/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# External evaluation corpus downloads and generated results
+eval/downloads/
+eval/results/
+eval/cache/

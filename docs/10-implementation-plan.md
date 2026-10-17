@@ -2,6 +2,18 @@
 
 This plan orders work so that model behavior is exercised against real documents before the pipeline grows complex. Each milestone includes runnable tests and documentation.
 
+## M0 — Curate the evaluation corpus (before substantial application implementation)
+
+- Adopt [the 120-document corpus plan](12-evaluation-corpus.md) and [machine-readable source quotas](../eval/corpus-plan.yaml).
+- Select a 20–30-document, diverse, licence-reviewed preview subset for the earliest real-model tests.
+- Freeze the eventual 120 source identities and their group-safe split: 72 development, 24 calibration, 24 holdout.
+- Record publisher/dataset, original link and revision, checksum, file-specific reuse rights and attribution per case.
+- Annotate extraction schemas, expected field values and original page/block evidence; human-review ambiguous cases.
+- Keep large/third-party document binaries local unless redistribution has been expressly cleared.
+- Prepare evaluation harness contracts and corpus validation; do not invent sample IDs or claim labels exist before annotation.
+
+**Done when:** an approved preview corpus exists with reproducible source inventory and reviewed field/evidence labels; the full 120-document corpus plan is pinned for subsequent expansion.
+
 ## M1 — Foundation
 
 - Project/package layout using Python 3.13 and uv.
@@ -59,7 +71,7 @@ This plan orders work so that model behavior is exercised against real documents
 - PostgreSQL leasing worker with SKIP LOCKED, checkpoints and crash recovery.
 - Global and per-model concurrency/rate limits, spend/time ceilings.
 - OpenTelemetry local JSONL with safe default attributes.
-- Evaluation runner, ground-truth dataset, always-vision baseline and metrics.
+- Evaluation runner, the complete and reviewed 120-document corpus with frozen 72/24/24 splits, always-vision baseline and metrics.
 - Public README usage example, security/contribution docs and compatibility validation.
 
 **Done when:** the system survives worker interruption and emits a repeatable measured comparison on real OpenRouter models.

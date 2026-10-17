@@ -1,58 +1,67 @@
 # 09 — Evaluation Strategy
 
-## Central question
+## Fixed MVP corpus
 
-Can field-aware decision-model routing reduce the **total** cost and latency of document extraction while preserving output correctness, evidence quality and page/unit recall relative to an always-vision extraction baseline?
+The initial **target** is **120 documents**, covering a planning estimate of roughly **400–700 pages/logical units** (not a cap or a guarantee):
 
-The evaluation suite is a first-class MVP deliverable, not a later nice-to-have.
+| Source | Count |
+|---|---:|
+| DocLayNet single-page PDFs | 35 |
+| CORD v2 receipt images | 30 |
+| UK government multi-page PDFs | 20 |
+| UK government DOCX | 15 |
+| Realistic synthetic stress documents | 20 |
+| **Total** | **120** |
 
-## Dataset
+The exact source selection, licensing/redistribution checks, annotation conventions, 72/24/24 split, dataset preparation, verification counterfactuals and execution procedure are fully specified in **[12 — Evaluation Corpus](12-evaluation-corpus.md)**. The machine-readable target plan is [eval/corpus-plan.yaml](../eval/corpus-plan.yaml).
 
-Start with a labeled set of approximately 200–500 diverse pages/units and grow it over time. Include:
+**Status is PLANNED, not DOWNLOADED/ANNOTATED.** The dataset must be prepared before substantial pipeline development. Begin with 20–30 approved preview cases and expand to the complete frozen 120-document suite. This avoids false claims about unverified file IDs or already-existing gold labels.
 
-- Native-text PDFs, scan-only PDFs, mixed pages and page continuations.
-- Simple text, headings, dense tables, multi-page tables, small numeric labels, rotated sections, handwritten elements.
-- DOCX with text/tables/embedded images and representative semantic conversion limitations.
-- Raster invoices, reports, forms, receipts, contracts and other general-purpose document types.
-- Cases with missing values, contradictions, repeated values, ambiguous periods/units and irrelevant pages.
-- Synthetic or redistribution-safe documents in the public repository. Keep any private evaluation corpus outside git and out of public CI.
+## Central research question
 
-Each case records original source, schema, expected values, acceptable normalizations, field-to-source-unit labels, supported/not-supported annotations and optional valid evidence spans.
+Can field-aware decision-model routing reduce **end-to-end** document processing cost and latency while retaining output correctness, source-citation accuracy and page/block evidence recall versus always-vision extraction?
 
-## Baselines and experiments
+Separate single-page layout/extraction measurements from truly multi-page relevance experiments. Source annotations from DocLayNet are for layout, not automatic answers to the extraction schemas we invent. Real government sources need human-reviewed field labels and evidence locations.
 
-1. **Always-vision:** send all units as images to the extraction model without relevance pruning.
-2. **Always-text when present:** basic text extraction, with missing cases marked, as an inexpensive lower-quality comparison.
-3. **AI relevance + modality:** proposed decision routing and extraction pipeline.
-4. **No verification:** ablate verification to measure impact.
-5. **With verification and escalation:** measure final accuracy and retry costs.
-6. **Decision model comparison:** Decider V1.2 vs Flash and compatible alternatives; single vs grouped questions.
-7. **Extraction model comparison:** cost-focused base model versus stronger escalation model.
+## Test methods
 
-Keep identical schemas and datasets for fair comparisons. Record model IDs/revisions, parameters, prompt versions, decisions, usage, provider latency and run timestamp.
+1. **Always-vision baseline:** process all available source units as images, without relevance pruning.
+2. **Text-only baseline:** native extracted text when available, with explicit inability/partial results otherwise.
+3. **Decision-led pipeline:** field relevance → modality selection → structured extraction.
+4. **Verification ablation:** rerun decision-led extraction with and without field verification.
+5. **Full recovery:** verification, missing-field coverage review and bounded escalation.
+6. **Model experiments:** Decider V1.2 vs Flash/compatible alternatives; cheap extraction vs stronger escalation; single-question vs batched decisions.
+7. **Modality comparison:** TEXT / VISION / BOTH on the **same** examples, allowing multiple successful strategies.
+
+Use versioned model settings, prompts, schemas and identical frozen splits. Record downstream effects of missed relevance decisions instead of hiding them inside aggregate extraction scores.
 
 ## Metrics
 
-- **Page/unit relevance recall:** fraction of required evidence units retained. False negatives are particularly harmful.
-- **Precision of selected units:** selected units that were actually needed, plus selection ratio.
-- **Field-level exact/normalized accuracy:** evaluated against labeled ground truth.
-- **Evidence correctness:** whether cited units and spans truly support the extracted field.
-- **False acceptance rate:** unsupported values marked verified; a critical metric.
-- **Abstention and missing-field recovery:** correct null/unresolved and successful coverage-review recoveries.
-- **Calibration:** reliability diagram and Brier score where decision probabilities can be paired with labels; avoid claiming out-of-the-box confidence calibration.
-- **Cost:** observed or estimated all-stage cost per document and verified field, including retries.
-- **Latency:** p50/p95 end-to-end latency, time by stage, total tokens and calls.
-- **Robustness:** provider/schema failures, context overflow, document conversion warnings.
+- Evidence-unit recall and false-negative page/block routing rate.
+- Selected-unit precision and selection fraction.
+- Exact/normalized ground-truth field accuracy, missing-value quality, nested array/line-item accuracy.
+- Evidence provenance correctness.
+- Verification confusion matrix, especially falsely **SUPPORTED** incorrect values.
+- Coverage-review recovery and incremental escalation success.
+- Where labels permit: score calibration / Brier score; do not treat raw model probabilities as correctness probabilities.
+- Full pipeline cost (including decisions, retries, extraction, verification, preparation when billable) and p50/p95 latency.
+- Unresolved/failure rates, schema errors and source-conversion limitations.
 
-## Run modes
+Report results by source and format as well as in aggregate. CORD’s easy-to-score receipts must not disguise a failure in multi-page routing.
 
-- Fast unit tests with mocked model interfaces and synthetic documents.
-- Opt-in real OpenRouter smoke/evaluation suite using explicit token/spend budgets.
-- Reproducible evaluation CLI that emits JSON/CSV/Markdown results and diff against a prior run.
-- Public CI uses no real credentials or private fixtures.
+## Evaluation workflow
 
-Do not optimize thresholds on the same examples used to report final accuracy. Split calibration/development from a held-out test set.
+- **Development split:** 72 documents for repeated iteration.
+- **Calibration split:** 24 documents for threshold selection and calibration.
+- **Holdout split:** 24 documents for infrequent, unbiased final reporting.
+- No source/templated near-duplicate may cross splits. Preserve upstream split metadata.
+- Real OpenRouter runs are opt-in, spend-capped and must never be required by normal public CI.
+- Local source binaries and large results are downloaded/generated outside git and linked through a manifest of source IDs, URL/revision, SHA-256, licence and annotations.
+- Mock unit tests and safe synthetic fixtures remain in CI.
+- Produce comparable JSON/CSV/Markdown reports and retain model/provider/version/time metadata.
 
-## Preliminary success criteria
+## Working hypothesis, not a benchmark claim
 
-Targets are hypotheses, not performance claims: match or exceed 95% of always-vision field accuracy on held-out data while reducing total model spend by at least 30%; hold false-accept verification rates below a separately defined domain risk budget. Revisit targets after first measured baseline and show trade-offs rather than hiding failures.
+After freezing ground truth, test whether the decision-led pipeline can match at least 95% of always-vision field accuracy while lowering **overall model cost** by at least 30%. Independently establish a strict limit on false acceptance of incorrect fields. Report actual observations even if the hypothesis fails.
+
+**See also:** [Implementation Plan](10-implementation-plan.md), [Corpus Selection and Licensing](12-evaluation-corpus.md).

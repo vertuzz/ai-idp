@@ -1,0 +1,76 @@
+# Target-only configuration. No document assets or annotations are included.
+# See docs/12-evaluation-corpus.md for the binding selection, licensing, and labeling rules.
+version: 1
+name: ai-idp-pilot-120
+status: planned
+created_date: "2026-10-17"
+target_document_count: 120
+estimated_document_units:
+  min: 400
+  max: 700
+  informational_only: true
+splits:
+  development: 72
+  calibration: 24
+  holdout: 24
+selection:
+  frozen_manifest_path: eval/manifest.jsonl
+  seed: 1729
+  preserve_upstream_splits: true
+  enforce_source_document_grouping: true
+  enforce_duplicate_and_template_grouping: true
+  case_statuses: [selected, licence_approved, downloaded, annotated, reviewed, evaluation_ready]
+  require_sha256: true
+  require_attribution: true
+  require_human_review_of_field_ground_truth: true
+sources:
+  - id: doclaynet
+    description: Real document layout pages; prefer one-page PDF and image counterparts.
+    url: https://huggingface.co/datasets/docling-project/DocLayNet
+    reference_license: CDLA-Permissive-1.0
+    target_documents: 35
+    split: {development: 21, calibration: 7, holdout: 7}
+    selection_status: planned
+    special_requirements: [preserve_parent_document_id, create_field_ground_truth]
+  - id: cord_v2
+    description: Real scanned receipts with source labels.
+    url: https://huggingface.co/datasets/naver-clova-ix/cord-v2
+    reference_license: CC-BY-4.0
+    target_documents: 30
+    split: {development: 18, calibration: 6, holdout: 6}
+    selection_status: planned
+    special_requirements: [attribution, review_reference_to_schema_mapping]
+  - id: gov_uk_pdf
+    description: Authentic public-sector multi-page PDFs.
+    url: https://www.gov.uk/government/publications
+    reference_license: OGL-3.0-where-applicable
+    target_documents: 20
+    split: {development: 12, calibration: 4, holdout: 4}
+    selection_status: planned
+    special_requirements: [check_file_specific_rights, annotate_full_document_evidence]
+  - id: gov_uk_docx
+    description: Authentic public-sector Word documents and forms.
+    url: https://www.gov.uk/government/publications
+    reference_license: OGL-3.0-where-applicable
+    target_documents: 15
+    split: {development: 9, calibration: 3, holdout: 3}
+    selection_status: planned
+    special_requirements: [check_file_specific_rights, annotate_semantic_block_ids]
+  - id: synthetic
+    description: Project-owned realistic stress documents with generated and reviewed answers.
+    url: null
+    reference_license: Apache-2.0
+    target_documents: 20
+    split: {development: 12, calibration: 4, holdout: 4}
+    selection_status: planned
+    special_requirements: [no_real_personal_data, annotate_source_units, distinct_generation_templates_by_split]
+evaluation:
+  smoke_sample_target: [20, 30]
+  target_fields_per_document: [3, 8]
+  use_field_level_sources: true
+  require_negative_and_missing_values: true
+  include_counterfactual_verification_tests: true
+  baselines: [always_vision, text_only, ai_routing, ai_routing_no_verification, ai_routing_full]
+  report_by_source: true
+  opt_in_live_openrouter: true
+  never_commit_unreviewed_raw_assets: true

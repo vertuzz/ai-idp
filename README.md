@@ -24,7 +24,7 @@ The project begins as a self-hosted HTTP API and may later evolve into a product
 - PyMuPDF for PDF text, metadata, and page rendering; Mammoth for lightweight DOCX-to-semantic-HTML extraction; native support for image inputs.
 - PostgreSQL for jobs, checkpoints, evaluations, and a leasing queue; local filesystem for original files and derived artifacts.
 - OpenTelemetry for spans and metrics, exported to local JSONL initially.
-- pytest and reproducible, labeled real-model evaluation runs.
+- pytest and reproducible, labeled real-model evaluation runs. The initial **planned 120-document corpus** combines DocLayNet (35), CORD v2 (30), UK government PDFs (20), UK government DOCX (15), and synthetic stress files (20); see [corpus plan](docs/12-evaluation-corpus.md).
 
 ## Scope
 
@@ -54,6 +54,7 @@ Deterministic **mechanical** operations are still required: parsing files, rende
 | [Data model](docs/07-data-model.md) | PostgreSQL entities and durable queue |
 | [Observability](docs/08-observability-and-queue.md) | Worker operations, telemetry, limits |
 | [Evaluation](docs/09-evaluation-strategy.md) | Ground truth, baselines, metrics, experiments |
+| [120-document evaluation corpus](docs/12-evaluation-corpus.md) | Exact quotas, sources, licensing, annotation and data splits |
 | [Implementation plan](docs/10-implementation-plan.md) | Ordered milestones and definition of done |
 | [Decisions](docs/11-decisions-and-open-questions.md) | Architectural decisions and unresolved questions |
 
