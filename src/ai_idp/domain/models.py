@@ -42,6 +42,7 @@ class DocumentUnit(BaseModel):
     source_locator: dict[str, Any] = Field(default_factory=dict)
     native_text_ref: str | None = None
     image_ref: str | None = None
+    image_refs: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @property
@@ -49,9 +50,9 @@ class DocumentUnit(BaseModel):
         modalities: list[Modality] = []
         if self.native_text_ref:
             modalities.append(Modality.TEXT)
-        if self.image_ref:
+        if self.image_ref or self.image_refs:
             modalities.append(Modality.VISION)
-        if self.native_text_ref and self.image_ref:
+        if self.native_text_ref and (self.image_ref or self.image_refs):
             modalities.append(Modality.TEXT_AND_VISION)
         return modalities
 

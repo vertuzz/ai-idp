@@ -12,7 +12,7 @@ Inputs:
 
 - Unit image when available; native text/semantic HTML; document/unit metadata.
 - Requested JSON Schema and field descriptions, including optional extraction guidance.
-- Minimal neighboring context such as preceding/following unit headings or brief excerpts.
+- Full native/semantic document text as context, with stable unit IDs, locators and caller guidance. The candidate unit also supplies all of its source images.
 - Stable field IDs or JSON paths.
 
 Output: per-unit, per-field (or closely related field-group) relevance scores, uncertainty, optional evidence tags and an overall candidate-unit map.
@@ -52,6 +52,8 @@ Persist: model ID, provider API version, question set/version, state artifact ID
 ## Failure and uncertainty
 
 - Invalid/partial decision responses: bounded retry with backoff.
+- Missing answers, invalid probabilities and inconsistent choices fail explicitly; they never default to a positive verification result or an invented probability vector.
+- Do not truncate source text, candidate values, quotes or document context by character count. Provider context errors remain explicit failures.
 - Rate limiting: requeue with delay rather than busy-loop.
 - Low confidence or disagreeing signals: preserve multiple candidates.
 - Model unavailable: record failure and stop or use an **explicitly configured** backup model; never silently change providers.

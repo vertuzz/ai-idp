@@ -119,7 +119,6 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
         if run_inline and job.status.value == "pending":
             await c.pipeline_service.execute_job(job.job_id)
             job = c.inspect_job_use_case.get_job(job.job_id)
-            c.job_repo.complete_queue_item(job.job_id, job.status)
 
         return CreateExtractionResponse(
             job_id=job.job_id,

@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     )
 
     database_url: str = Field(
+        # pragma: allowlist nextline secret (public local-development default)
         default="postgresql+psycopg://ai_idp:ai_idp@localhost:5432/ai_idp",
         validation_alias="DATABASE_URL",
     )
@@ -59,9 +60,10 @@ class Settings(BaseSettings):
     max_docx_blocks: int = Field(default=1000, validation_alias="MAX_DOCX_BLOCKS")
     max_expanded_mib: int = Field(default=1024, validation_alias="MAX_EXPANDED_MIB")
     max_image_pixels: int = Field(default=40_000_000, validation_alias="MAX_IMAGE_PIXELS")
-    max_concurrent_jobs: int = Field(default=2, validation_alias="MAX_CONCURRENT_JOBS")
+    max_concurrent_jobs: int = Field(default=2, ge=1, validation_alias="MAX_CONCURRENT_JOBS")
     max_concurrent_model_requests: int = Field(
         default=6,
+        ge=1,
         validation_alias="MAX_CONCURRENT_MODEL_REQUESTS",
     )
     max_provider_retries: int = Field(default=3, validation_alias="MAX_PROVIDER_RETRIES")
@@ -78,10 +80,12 @@ class Settings(BaseSettings):
     relevance_top_k: int = Field(default=2, validation_alias="RELEVANCE_TOP_K")
     verification_supported_threshold: float = Field(
         default=0.50,
+        ge=0,
+        le=1,
         validation_alias="VERIFICATION_SUPPORTED_THRESHOLD",
     )
-    worker_lease_seconds: int = Field(default=120, validation_alias="WORKER_LEASE_SECONDS")
-    worker_poll_seconds: float = Field(default=1.0, validation_alias="WORKER_POLL_SECONDS")
+    worker_lease_seconds: int = Field(default=120, ge=1, validation_alias="WORKER_LEASE_SECONDS")
+    worker_poll_seconds: float = Field(default=1.0, ge=0.01, validation_alias="WORKER_POLL_SECONDS")
 
     @property
     def max_upload_bytes(self) -> int:

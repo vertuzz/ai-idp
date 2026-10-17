@@ -4,7 +4,7 @@ AI-IDP is an open-source, general-purpose Intelligent Document Processing (IDP) 
 
 The project begins as a self-hosted HTTP API and may later evolve into a production service or SaaS product. It is **not specific to any industry, employer, or proprietary document workflow**.
 
-**Status:** The core hexagonal backend, FastAPI HTTP API (`/v1`), PostgreSQL leasing queue and worker, PyMuPDF/Mammoth/Pillow document normalizers, OpenRouter Decisions API (`POST /api/alpha/decisions`) and Pydantic AI extraction adapters, field-level verification/escalation, local OpenTelemetry JSONL exporter, and evaluation harness are implemented and verified. All 120 candidate corpus files are acquired, with provenance, checksums and draft 72/24/24 splits. Fifty cases have draft answer keys; 70 await field annotation. Human review and final benchmark freeze are pending.
+**Status:** The core backend, HTTP API (`/v1`), PostgreSQL leasing queue, document readers, OpenRouter adapters, field verification/recovery, telemetry, and evaluation harness are implemented. Regression tests cover incomplete model responses, full-context verification, embedded images, exclusive execution and crash recovery; live development-document runs are diagnostics, not a reviewed benchmark. All 120 candidate corpus files are acquired, with provenance, checksums and draft 72/24/24 splits. Fifty cases have draft answer keys; 70 await field annotation. Human review and final benchmark freeze are pending.
 
 **License:** [Apache License 2.0](LICENSE). Contributions and dependencies must be compatible with permissive open-source distribution.
 
@@ -15,6 +15,7 @@ Install uv, configure `.env` from `.env.example`, start PostgreSQL, apply migrat
 
 ~~~text
 uv sync --locked --group dev --group evaluation
+uv run --locked pre-commit install
 docker compose up -d postgres
 uv run python -m alembic upgrade head
 uv run --group dev --group evaluation python -m pytest -q
@@ -34,10 +35,18 @@ Prepare/validate the 120-file evaluation corpus and run opt-in live model checks
 uv run --group evaluation python -m scripts.prepare_corpus
 uv run --group evaluation python -m scripts.validate_corpus
 uv run --group evaluation python -m scripts.smoke_models
-uv run python -m ai_idp.evaluation.runner --case-id synthetic-native-01 --case-id synthetic-scan-01 --case-id synthetic-mixed-01 --case-id synthetic-docx-01 --case-id cord-v2-train-0000 --profile default --profile always_vision
+uv run python -m ai_idp.evaluation.runner --case-id synthetic-native-01 --case-id synthetic-scan-01 --case-id synthetic-mixed-01 --case-id synthetic-docx-01 --case-id cord-v2-train-0000 --limit 5 --profile default --profile always_vision
 ~~~
 
 Python 3.13 is selected through `.python-version`. Original external files remain in ignored `eval/downloads/`. The corpus contains 70 PDFs, 20 DOCX files and 30 receipt PNGs; counterpart images do not count again. See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md).
+
+Apply `alembic upgrade head` to existing databases before starting the updated API/worker. Model inputs are sent without character truncation: routing receives full document text as context, and verification receives all prepared source units and complete candidate values. Provider context limits fail explicitly; content is never silently removed to fit.
+
+DOCX blocks retain every embedded image. Since an embedded image is not a rendered Word page, the `always_vision` profile preserves semantic text alongside images for DOCX; it is a complete semantic-input baseline for that format, not an office-layout rendering.
+
+All execution paths, including `run_inline=true` and evaluations, take renewable exclusive job leases. Finished model calls are checkpointed with their usage and reused on retry. A crash between a provider response and durable checkpoint storage can still require repeating that call; spending limits are estimates checked before each new call and after reported usage, not hard provider billing caps.
+
+PostgreSQL concurrency and recovery regressions are opt-in: set `AI_IDP_TEST_POSTGRES_URL` to a development database and run `uv run --group dev --group evaluation python -m pytest -q tests/integration/test_postgres_leases.py`. Tests migrate and remove their own isolated schemas and make no model calls.
 
 ## Core ideas
 

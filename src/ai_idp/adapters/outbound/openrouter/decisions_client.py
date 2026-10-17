@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import math
 import time
 import uuid
 from typing import Any
@@ -33,7 +34,9 @@ def _encode_data_url(image_bytes: bytes, media_type: str = "image/png") -> str:
     return f"data:{media_type};base64,{b64}"
 
 
-def _build_unit_state(payload: UnitInputPayload, extra_context: str = "") -> list[Any]:
+def _build_unit_state(
+    payload: UnitInputPayload, extra_context: str = "", *, include_context: bool = True
+) -> list[Any]:
     unit = payload.unit
     avail_names = [m.value for m in unit.available_modalities]
     header_lines = [
@@ -44,64 +47,79 @@ def _build_unit_state(payload: UnitInputPayload, extra_context: str = "") -> lis
     ]
     if extra_context:
         header_lines.append(extra_context)
-    if payload.prev_excerpt:
+    if payload.extraction_instructions:
+        header_lines.append(f"Caller extraction instructions: {payload.extraction_instructions}")
+    if include_context and payload.document_context:
+        header_lines.append(f"Full document context:\n{payload.document_context}")
+    if include_context and payload.prev_excerpt and not payload.document_context:
         header_lines.append(f"Preceding unit excerpt: {payload.prev_excerpt}")
-    if payload.next_excerpt:
+    if include_context and payload.next_excerpt and not payload.document_context:
         header_lines.append(f"Following unit excerpt: {payload.next_excerpt}")
     if payload.native_text:
-        header_lines.append(
-            f"Extracted Native Text / Semantic Content:\n{payload.native_text[:12000]}"
-        )
+        header_lines.append(f"Extracted Native Text / Semantic Content:\n{payload.native_text}")
     else:
         header_lines.append("Extracted Native Text: <none available>")
 
     state: list[Any] = ["\n".join(header_lines)]
-    if payload.image_bytes:
+    images = [(payload.image_bytes, payload.image_media_type)] if payload.image_bytes else []
+    for image_bytes, media_type in [*images, *payload.additional_images]:
         state.append(
             {
                 "type": "image_url",
-                "image_url": {
-                    "url": _encode_data_url(payload.image_bytes, payload.image_media_type)
-                },
+                "image_url": {"url": _encode_data_url(image_bytes, media_type)},
             }
         )
     return state
 
 
+def _probability(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ProviderError("Decision response has a non-numeric probability.")
+    value = float(value)
+    if not math.isfinite(value) or not 0 <= value <= 1:
+        raise ProviderError("Decision response probability is outside [0, 1].")
+    return value
+
+
+def _distribution(raw: Any, options: list[str]) -> dict[str, float]:
+    if not isinstance(raw, dict) or set(raw) != set(options):
+        raise ProviderError("Decision response has an incomplete probability distribution.")
+    probabilities = {opt: _probability(raw[opt]) for opt in options}
+    if not math.isclose(sum(probabilities.values()), 1.0, abs_tol=0.01):
+        raise ProviderError("Decision response probabilities do not sum to one.")
+    return probabilities
+
+
 def _parse_noul_answer(ans: Any) -> tuple[float, dict[str, float]]:
     if isinstance(ans, (int, float)):
-        p_true = float(ans)
+        p_true = _probability(ans)
         return p_true, {"true": p_true, "false": round(max(0.0, 1.0 - p_true), 6)}
     if isinstance(ans, dict):
         if isinstance(ans.get("noul"), (int, float)):
-            p_true = float(ans["noul"])
+            p_true = _probability(ans["noul"])
             return p_true, {"true": p_true, "false": round(max(0.0, 1.0 - p_true), 6)}
         probs = ans.get("probabilities") or ans.get("distribution") or ans
         if isinstance(probs, dict) and "true" in probs:
-            p_true = float(probs["true"])
-            p_false = float(probs.get("false", max(0.0, 1.0 - p_true)))
-            return p_true, {"true": p_true, "false": p_false}
-    return 0.5, {"true": 0.5, "false": 0.5}
+            distribution = _distribution(probs, ["true", "false"])
+            return distribution["true"], distribution
+    raise ProviderError("Decision response is missing a valid relevance answer.")
 
 
 def _parse_choice_answer(ans: Any, options: list[str]) -> tuple[str, dict[str, float]]:
     if isinstance(ans, dict):
-        probs_raw = ans.get("probabilities") or ans.get("distribution") or {}
-        probs: dict[str, float] = {}
-        if isinstance(probs_raw, dict):
-            for opt in options:
-                if opt in probs_raw and isinstance(probs_raw[opt], (int, float)):
-                    probs[opt] = float(probs_raw[opt])
+        probs_raw = ans.get("probabilities", ans.get("distribution"))
+        probs = _distribution(probs_raw, options) if probs_raw is not None else {}
         chosen = ans.get("choice") or ans.get("selected")
         if isinstance(chosen, str) and chosen in options:
             if not probs:
-                probs = {opt: (1.0 if opt == chosen else 0.0) for opt in options}
+                return chosen, {}
+            if chosen != max(probs, key=probs.get):
+                raise ProviderError("Decision choice conflicts with its probability distribution.")
             return chosen, probs
         if probs:
             best = max(probs.items(), key=lambda kv: kv[1])[0]
             return best, probs
-    fallback = options[0]
-    return fallback, {opt: (1.0 if opt == fallback else 0.0) for opt in options}
+    raise ProviderError("Decision response is missing a valid choice answer.")
 
 
 class OpenRouterDecisionEngine:
@@ -175,8 +193,10 @@ class OpenRouterDecisionEngine:
                         )
 
                     data = resp.json()
-                    if not isinstance(data, dict) or "answers" not in data:
+                    if not isinstance(data, dict) or not isinstance(data.get("answers"), dict):
                         raise ProviderError("Malformed response from OpenRouter Decisions API.")
+                    if any(key not in data["answers"] for key in questions):
+                        raise ProviderError("OpenRouter Decisions API omitted a requested answer.")
                     return data, latency_ms
                 except (httpx.RequestError, httpx.TimeoutException) as exc:
                     last_exc = exc
@@ -437,19 +457,13 @@ class OpenRouterDecisionEngine:
         if not fields_to_verify:
             return VerificationBatchResult()
 
-        # Gather all referenced units in order
-        referenced_ids: list[str] = []
-        for _f_spec, _val, evidences in fields_to_verify:
-            for ev in evidences:
-                if ev.unit_id in unit_payloads_by_id and ev.unit_id not in referenced_ids:
-                    referenced_ids.append(ev.unit_id)
-        if not referenced_ids:
-            referenced_ids = list(unit_payloads_by_id.keys())[:2]
+        # Verification and absence checks need the complete original source, not only citations.
+        referenced_ids = list(unit_payloads_by_id)
 
         state: list[Any] = []
         for uid in referenced_ids:
             p = unit_payloads_by_id[uid]
-            state.extend(_build_unit_state(p))
+            state.extend(_build_unit_state(p, include_context=False))
 
         options = [
             VerificationStatus.SUPPORTED.value,
@@ -461,19 +475,25 @@ class OpenRouterDecisionEngine:
         for idx, (f_spec, val, evidences) in enumerate(fields_to_verify):
             q_key = f"verify_{idx}"
             key_to_field[q_key] = (f_spec, val)
-            val_repr = json.dumps(val, ensure_ascii=False)[:1500]
+            val_repr = json.dumps(val, ensure_ascii=False)
             quotes = [ev.quote for ev in evidences if ev.quote]
             quote_hint = (
-                f" Cited quote(s): {json.dumps(quotes, ensure_ascii=False)[:500]}."
-                if quotes
-                else ""
+                f" Cited quote(s): {json.dumps(quotes, ensure_ascii=False)}." if quotes else ""
             )
             desc_hint = f" Field description: {f_spec.description}." if f_spec.description else ""
+            citations = json.dumps([ev.model_dump(mode="json") for ev in evidences])
             questions[q_key] = {
                 "type": "choice",
                 "instructions": (
                     f"Verify whether the source document unit(s) support the extracted value "
-                    f"for field '{f_spec.name}' = {val_repr}.{desc_hint}{quote_hint}"
+                    f"for field '{f_spec.name}' = {val_repr}.{desc_hint}{quote_hint} "
+                    f"Field schema: {json.dumps(f_spec.raw_schema)}. Citations: {citations}. "
+                    "Check the entire value, including every array item and object property. "
+                    "For null or an empty collection, SUPPORTED means the complete document "
+                    "establishes absence; if the answer is present return CONTRADICTED, "
+                    "and if absence cannot be established return INSUFFICIENT_EVIDENCE. "
+                    "For populated values, confirm that each cited unit and quote really "
+                    "supports this field; support elsewhere does not repair an incorrect citation."
                 ),
                 "criteria": {
                     "SUPPORTED": (

@@ -83,7 +83,6 @@ async def run_evaluation_suite(
                 model_profile=profile,
             )
             result = await container.pipeline_service.execute_job(job.job_id)
-            container.job_repo.complete_queue_item(job.job_id, result.status)
 
             summary = score_extraction_result(
                 case_id=case_id,

@@ -71,3 +71,8 @@ class RateLimitedError(DomainError):
 class ProviderError(DomainError):
     code = "provider_error"
     http_status = 502
+
+
+class JobLeaseLostError(DomainError):
+    code = "job_lease_lost"
+    http_status = 409

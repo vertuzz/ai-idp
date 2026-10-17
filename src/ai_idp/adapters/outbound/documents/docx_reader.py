@@ -221,7 +221,7 @@ class MammothDocxDocumentReader:
             locator: dict[str, Any] = {"block_id": unit_id, "block_index": idx}
             if blk["heading"]:
                 locator["heading"] = blk["heading"]
-            if primary_image_name:
+            if primary_image_name and len(set(blk_images)) == 1:
                 locator["embedded_image"] = primary_image_name
 
             units.append(
@@ -233,6 +233,7 @@ class MammothDocxDocumentReader:
                     source_locator=locator,
                     native_text_ref=text_ref,
                     image_ref=image_ref,
+                    image_refs=[embedded_images[name] for name in dict.fromkeys(blk_images)],
                     metadata={
                         "heading": blk["heading"],
                         "table_count": blk["table_count"],

@@ -95,6 +95,7 @@ def build_container(
         job_repo=job_repo,
         result_repo=result_repo,
         telemetry=telemetry,
+        lease_seconds=cfg.worker_lease_seconds,
     )
     ingest_use_case = IngestDocumentUseCase(
         blob_store=blob_store,

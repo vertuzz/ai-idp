@@ -54,6 +54,7 @@ class DocumentUnitRow(Base):
     locator_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     text_ref: Mapped[str | None] = mapped_column(String(512), nullable=True)
     image_ref: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    image_refs_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
 
 
@@ -185,6 +186,16 @@ class UsageRecordRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_now
     )
+
+
+class JobStepRow(Base):
+    __tablename__ = "job_steps"
+
+    job_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("extraction_jobs.id", ondelete="CASCADE"), primary_key=True
+    )
+    step_key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
 class EvaluationRunRow(Base):

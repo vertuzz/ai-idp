@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from pathlib import PurePosixPath
 from typing import Any
 
 from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
+from ai_idp.adapters.outbound.persistence.leases import execution_scope, require_lease
 from ai_idp.adapters.outbound.persistence.models import (
     DecisionRow,
     DocumentRow,
@@ -16,6 +18,7 @@ from ai_idp.adapters.outbound.persistence.models import (
     FieldAttemptRow,
     FieldResultRow,
     JobQueueRow,
+    JobStepRow,
     UsageRecordRow,
 )
 from ai_idp.domain.enums import (
@@ -27,7 +30,7 @@ from ai_idp.domain.enums import (
     UnitKind,
     VerificationStatus,
 )
-from ai_idp.domain.errors import JobNotFoundError
+from ai_idp.domain.errors import JobLeaseLostError, JobNotFoundError
 from ai_idp.domain.models import (
     DecisionRecord,
     Document,
@@ -71,6 +74,8 @@ class SqlAlchemyJobRepository:
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
+
+    execution_scope = staticmethod(execution_scope)
 
     def save_document(self, document: Document) -> Document:
         with self._session_factory() as session:
@@ -125,6 +130,7 @@ class SqlAlchemyJobRepository:
                         locator_json=u.source_locator,
                         text_ref=u.native_text_ref,
                         image_ref=u.image_ref,
+                        image_refs_json=u.image_refs,
                         metadata_json=u.metadata,
                     )
                 )
@@ -137,19 +143,32 @@ class SqlAlchemyJobRepository:
                 .where(DocumentUnitRow.document_id == document_id)
                 .order_by(DocumentUnitRow.ordinal.asc())
             ).all()
-            return [
-                DocumentUnit(
-                    unit_id=r.unit_id,
-                    document_id=r.document_id,
-                    ordinal=r.ordinal,
-                    kind=UnitKind(r.kind),
-                    source_locator=dict(r.locator_json or {}),
-                    native_text_ref=r.text_ref,
-                    image_ref=r.image_ref,
-                    metadata=dict(r.metadata_json or {}),
+            units = []
+            for r in rows:
+                image_refs = list(r.image_refs_json or [])
+                if not image_refs and r.image_ref:
+                    # Recover images already stored by the initial DOCX adapter, too.
+                    image_refs = [
+                        str(PurePosixPath(r.image_ref).parent / name)
+                        for name in (r.metadata_json or {}).get("embedded_images", [])
+                    ]
+                locator = dict(r.locator_json or {})
+                if r.kind == UnitKind.DOCX_BLOCK.value and len(image_refs) > 1:
+                    locator.pop("embedded_image", None)
+                units.append(
+                    DocumentUnit(
+                        unit_id=r.unit_id,
+                        document_id=r.document_id,
+                        ordinal=r.ordinal,
+                        kind=UnitKind(r.kind),
+                        source_locator=locator,
+                        native_text_ref=r.text_ref,
+                        image_ref=r.image_ref,
+                        image_refs=image_refs,
+                        metadata=dict(r.metadata_json or {}),
+                    )
                 )
-                for r in rows
-            ]
+            return units
 
     def save_spec(self, spec: ExtractionSpecification) -> ExtractionSpecification:
         with self._session_factory() as session:
@@ -251,6 +270,7 @@ class SqlAlchemyJobRepository:
     ) -> ExtractionRun:
         now = _utc_now()
         with self._session_factory() as session:
+            require_lease(session, job_id)
             row = session.get(ExtractionJobRow, job_id)
             if row is None:
                 raise JobNotFoundError(f"Job '{job_id}' not found.")
@@ -276,6 +296,9 @@ class SqlAlchemyJobRepository:
     def request_cancel(self, job_id: str) -> ExtractionRun:
         now = _utc_now()
         with self._session_factory() as session:
+            q_row = session.scalar(
+                select(JobQueueRow).where(JobQueueRow.job_id == job_id).with_for_update()
+            )
             row = session.get(ExtractionJobRow, job_id)
             if row is None:
                 raise JobNotFoundError(f"Job '{job_id}' not found.")
@@ -288,7 +311,6 @@ class SqlAlchemyJobRepository:
             row.status = JobStatus.CANCELLED.value
             row.stage = JobStage.DONE.value
             row.updated_at = now
-            q_row = session.get(JobQueueRow, job_id)
             if q_row is not None:
                 q_row.status = "cancelled"
                 q_row.lease_owner = None
@@ -302,6 +324,16 @@ class SqlAlchemyJobRepository:
             return row is not None and row.status == JobStatus.CANCELLED.value
 
     def lease_next_job(self, worker_id: str, lease_seconds: int = 120) -> ExtractionRun | None:
+        return self._claim(worker_id, lease_seconds)
+
+    def claim_job(
+        self, job_id: str, worker_id: str, lease_seconds: int = 120
+    ) -> ExtractionRun | None:
+        return self._claim(worker_id, lease_seconds, job_id)
+
+    def _claim(
+        self, worker_id: str, lease_seconds: int, job_id: str | None = None
+    ) -> ExtractionRun | None:
         now = _utc_now()
         lease_until = now + timedelta(seconds=lease_seconds)
         with self._session_factory() as session:
@@ -318,13 +350,20 @@ class SqlAlchemyJobRepository:
                 .limit(1)
                 .with_for_update(skip_locked=True)
             )
+            if job_id is not None:
+                stmt = stmt.where(JobQueueRow.job_id == job_id)
             q_row = session.scalar(stmt)
             if q_row is None:
                 return None
 
             job_row = session.get(ExtractionJobRow, q_row.job_id)
-            if job_row is None or job_row.status == JobStatus.CANCELLED.value:
-                q_row.status = "cancelled"
+            if job_row is None or job_row.status in (
+                JobStatus.CANCELLED.value,
+                JobStatus.COMPLETED.value,
+                JobStatus.COMPLETED_WITH_UNRESOLVED.value,
+                JobStatus.FAILED.value,
+            ):
+                q_row.status = job_row.status if job_row else "cancelled"
                 session.commit()
                 return None
 
@@ -341,8 +380,11 @@ class SqlAlchemyJobRepository:
     def heartbeat_job(self, job_id: str, worker_id: str, lease_seconds: int = 120) -> bool:
         now = _utc_now()
         with self._session_factory() as session:
-            q_row = session.get(JobQueueRow, job_id)
-            if q_row is None or q_row.lease_owner != worker_id:
+            try:
+                q_row = require_lease(session, job_id)
+            except JobLeaseLostError:
+                return False
+            if q_row.lease_owner != worker_id:
                 return False
             q_row.heartbeat_at = now
             q_row.lease_until = now + timedelta(seconds=lease_seconds)
@@ -355,13 +397,15 @@ class SqlAlchemyJobRepository:
         status: JobStatus,
         error: str | None = None,
         max_attempts: int = 3,
+        *,
+        retry: bool = True,
     ) -> None:
         now = _utc_now()
         with self._session_factory() as session:
-            q_row = session.get(JobQueueRow, job_id)
+            q_row = require_lease(session, job_id)
             job_row = session.get(ExtractionJobRow, job_id)
             if q_row is not None:
-                if status == JobStatus.FAILED and q_row.attempt_count < max_attempts:
+                if retry and status == JobStatus.FAILED and q_row.attempt_count < max_attempts:
                     q_row.status = "queued"
                     q_row.lease_owner = None
                     q_row.lease_until = None
@@ -376,8 +420,9 @@ class SqlAlchemyJobRepository:
                     q_row.lease_owner = None
                     q_row.lease_until = None
                     q_row.last_error = error
-                    if job_row is not None and status == JobStatus.FAILED:
-                        job_row.status = JobStatus.FAILED.value
+                    if job_row is not None:
+                        job_row.status = status.value
+                        job_row.stage = JobStage.DONE.value
                         job_row.last_error = error
                         job_row.updated_at = now
             session.commit()
@@ -397,6 +442,35 @@ class SqlAlchemyResultRepository:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
 
+    def load_step(self, job_id: str, step_key: str) -> dict[str, Any] | None:
+        with self._session_factory() as session:
+            row = session.get(JobStepRow, (job_id, step_key))
+            return row.payload_json if row else None
+
+    def save_step(
+        self, job_id: str, step_key: str, payload: dict[str, Any], usage: UsageRecord | None
+    ) -> None:
+        with self._session_factory() as session:
+            require_lease(session, job_id)
+            if session.get(JobStepRow, (job_id, step_key)) is not None:
+                return
+            session.add(JobStepRow(job_id=job_id, step_key=step_key, payload_json=payload))
+            if usage is not None and session.get(UsageRecordRow, usage.usage_id) is None:
+                session.add(
+                    UsageRecordRow(
+                        id=usage.usage_id,
+                        job_id=job_id,
+                        stage=usage.stage,
+                        model_id=usage.model_id,
+                        tokens_in=usage.tokens_in,
+                        tokens_out=usage.tokens_out,
+                        estimated_cost_usd=usage.estimated_cost_usd,
+                        latency_ms=usage.latency_ms,
+                        created_at=usage.created_at,
+                    )
+                )
+            session.commit()
+
     def record_decision(self, record: DecisionRecord) -> None:
         self.record_decisions([record])
 
@@ -405,6 +479,7 @@ class SqlAlchemyResultRepository:
             return
         with self._session_factory() as session:
             for r in records:
+                require_lease(session, r.job_id)
                 if session.get(DecisionRow, r.decision_id) is not None:
                     continue
                 session.add(
@@ -450,6 +525,7 @@ class SqlAlchemyResultRepository:
 
     def record_field_attempt(self, job_id: str, attempt: FieldCandidateAttempt) -> None:
         with self._session_factory() as session:
+            require_lease(session, job_id)
             existing = session.scalar(
                 select(FieldAttemptRow).where(
                     FieldAttemptRow.job_id == job_id,
@@ -476,14 +552,16 @@ class SqlAlchemyResultRepository:
                     )
                 )
             else:
-                existing.candidate_json = candidate_payload
-                existing.model_id = attempt.model_id
-                existing.status = attempt.status
-                existing.error = attempt.error
+                if (
+                    existing.candidate_json != candidate_payload
+                    or existing.model_id != attempt.model_id
+                ):
+                    raise ValueError("A persisted field candidate cannot be overwritten.")
             session.commit()
 
     def record_usage(self, usage: UsageRecord) -> None:
         with self._session_factory() as session:
+            require_lease(session, usage.job_id)
             if session.get(UsageRecordRow, usage.usage_id) is None:
                 session.add(
                     UsageRecordRow(
@@ -507,6 +585,7 @@ class SqlAlchemyResultRepository:
         fields: dict[str, FieldValue],
     ) -> None:
         with self._session_factory() as session:
+            require_lease(session, job_id)
             job_row = session.get(ExtractionJobRow, job_id)
             if job_row is not None and job_row.status == JobStatus.CANCELLED.value:
                 return

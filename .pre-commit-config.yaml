@@ -1,0 +1,40 @@
+minimum_pre_commit_version: '4.0.0'
+repos:
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: Dependency lock is current
+        entry: uv lock --check --offline
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff-check
+        name: Ruff lint
+        entry: uv run --locked --group dev python -m ruff check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: ruff-format
+        name: Ruff format check
+        entry: uv run --locked --group dev python -m ruff format --check .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: repository-checks
+        name: Staged files, config, fixtures and document metadata
+        entry: uv run --locked --group dev --group evaluation python -m scripts.check_repository
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: detect-secrets
+        name: Secrets scan (offline)
+        entry: uv run --locked --group dev python -m detect_secrets.pre_commit_hook --no-verify --filter scripts.secret_filters.is_public_corpus_hash
+        language: system
+        types: [text]
+      - id: unit-tests
+        name: Basic unit tests (no models or database)
+        entry: uv run --locked --group dev --group evaluation python -m pytest -q tests/unit
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true

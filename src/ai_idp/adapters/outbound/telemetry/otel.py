@@ -45,7 +45,10 @@ class RotatingJsonlSpanExporter(SpanExporter):
     def export(self, spans: tuple[ReadableSpan, ...] | list[ReadableSpan]) -> SpanExportResult:
         with self._lock:
             try:
-                if self._current_file.exists() and self._current_file.stat().st_size >= self._max_bytes:
+                if (
+                    self._current_file.exists()
+                    and self._current_file.stat().st_size >= self._max_bytes
+                ):
                     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
                     rotated = self._dir / f"spans-{ts}.jsonl"
                     self._current_file.replace(rotated)

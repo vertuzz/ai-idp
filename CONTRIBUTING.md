@@ -16,8 +16,24 @@ AI-IDP is a public, Apache-2.0-licensed general-purpose IDP experiment. Contribu
 
 ## Local development
 
-Use Python 3.13 through uv: `uv sync --locked`, then `uv run python -m pytest -q`
-and `uv run ruff check .`. Run `uv run ruff format --check .` before submitting changes.
+Use Python 3.13 through uv:
+
+~~~text
+uv sync --locked --group dev --group evaluation
+uv run --locked pre-commit install
+uv run --locked pre-commit run --all-files
+~~~
+
+Installing the hook is a one-time step for each checkout. Commits run Ruff lint and format
+checks, offline lockfile validation, an offline secrets scan, Git-index publication checks,
+and the basic unit suite under `tests/unit`. Checks report failures without changing files.
+The publication check parses JSON/TOML/YAML, validates committed synthetic fixture hashes
+and split groups, and rejects local artifacts, personal filesystem paths and unreviewed
+document author metadata. It inspects staged bytes, including PDF/DOCX metadata.
+These checks need no PostgreSQL, downloaded corpus, network secret verification or model calls.
+Run `uv run --locked --group dev --group evaluation python -m pytest -q` for the full offline suite.
+
+Run `uv run --locked ruff check .` and `uv run --locked ruff format --check .` directly when useful.
 Use `uv run --group evaluation python -m scripts.prepare_corpus` to restore the 120-file
 candidate corpus. Run `uv run --group evaluation python -m scripts.validate_corpus`
 and `uv run --group evaluation python -m pytest -q` for corpus checks (see `eval/README.md`).
@@ -29,8 +45,8 @@ bootstrap has been exercised on Windows only; other platforms still require veri
 `.gitattributes` keeps source text at LF and preserves binary fixture bytes/checksums across
 platforms. Do not apply text line-ending normalization to document or image fixtures.
 
-Docker Compose, the API, and local PostgreSQL setup belong to the upcoming foundation
-milestone. Never commit a populated .env file; use the example environment file instead.
+See README for Docker Compose, API, worker and PostgreSQL setup. Never commit a populated
+.env file; use the example environment file instead.
 
 ## Security vulnerabilities
 

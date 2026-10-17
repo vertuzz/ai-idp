@@ -24,6 +24,7 @@ def main():
             "calibration",
             "data/validation-00000-of-00001-cc3c5779fe22e8ca.parquet",
             242080800,
+            # pragma: allowlist nextline secret (public upstream shard checksum)
             "0d0f6dac11fdcc549de2746aa9f53136a3bc22a2a1aff2b0b847f7622ad60c15",
             [15, 34, 51, 55, 68, 80],
         ),
@@ -32,6 +33,7 @@ def main():
             "holdout",
             "data/test-00000-of-00001-9c204eb3f4e11791.parquet",
             234202795,
+            # pragma: allowlist nextline secret (public upstream shard checksum)
             "51c65f1788faff392abe2a0b55b023eb23e9be551c509138eaa3a832514224e7",
             [4, 15, 19, 36, 53, 87],
         ),

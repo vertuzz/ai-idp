@@ -38,6 +38,10 @@ def _make_nullable_property(prop_schema: dict[str, Any]) -> dict[str, Any]:
         cloned.setdefault("additionalProperties", False)
     if isinstance(cloned.get("items"), dict) and cloned["items"].get("type") == "object":
         cloned["items"].setdefault("additionalProperties", False)
+    if "enum" in cloned and None not in cloned["enum"]:
+        cloned["enum"].append(None)
+    if "const" in cloned:
+        return {"anyOf": [cloned, {"type": "null"}]}
     return cloned
 
 
@@ -216,18 +220,19 @@ class PydanticAIExtractionEngine:
             )
             user_parts.append(unit_header)
             if modality in (Modality.TEXT, Modality.TEXT_AND_VISION) and payload.native_text:
-                user_parts.append(f"Unit Text ({u.unit_id}):\n{payload.native_text[:15000]}")
+                user_parts.append(f"Unit Text ({u.unit_id}):\n{payload.native_text}")
             elif modality == Modality.TEXT and not payload.native_text:
                 user_parts.append(f"Unit Text ({u.unit_id}): <no native text available>")
 
-            if modality in (Modality.VISION, Modality.TEXT_AND_VISION) and payload.image_bytes:
-                user_parts.append(f"Unit Image ({u.unit_id}):")
-                user_parts.append(
-                    BinaryContent(
-                        data=payload.image_bytes,
-                        media_type=payload.image_media_type,
-                    )
+            if modality in (Modality.VISION, Modality.TEXT_AND_VISION):
+                images = (
+                    [(payload.image_bytes, payload.image_media_type)] if payload.image_bytes else []
                 )
+                for idx, (content, media_type) in enumerate(
+                    [*images, *payload.additional_images], start=1
+                ):
+                    user_parts.append(f"Unit Image ({u.unit_id}, image {idx}):")
+                    user_parts.append(BinaryContent(data=content, media_type=media_type))
 
         provider = self._build_provider()
         chat_model = OpenAIChatModel(model_id, provider=provider)

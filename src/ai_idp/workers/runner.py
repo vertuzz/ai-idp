@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import uuid
 
 from ai_idp.adapters.inbound.http.dependencies import AppContainer, build_container
-from ai_idp.domain.enums import JobStatus
 
 
 class WorkerRunner:
@@ -28,51 +26,38 @@ class WorkerRunner:
         self._stop_event.set()
 
     async def process_one_if_available(self) -> str | None:
+        owner = f"{self._worker_id}:{uuid.uuid4().hex}"
         job = self._container.job_repo.lease_next_job(
-            worker_id=self._worker_id,
+            worker_id=owner,
             lease_seconds=self._lease_seconds,
         )
         if job is None:
             return None
 
-        heartbeat_task = asyncio.create_task(self._heartbeat_loop(job.job_id))
         try:
-            result = await self._container.pipeline_service.execute_job(job.job_id)
-            self._container.job_repo.complete_queue_item(job.job_id, result.status)
+            await self._container.pipeline_service.execute_job(job.job_id, lease_owner=owner)
             return job.job_id
-        except Exception as exc:
-            self._container.job_repo.complete_queue_item(
-                job.job_id,
-                JobStatus.FAILED,
-                error=str(exc)[:1000],
-            )
+        except Exception:
+            # The executor persists failures and retries while still owning the lease.
             return job.job_id
-        finally:
-            heartbeat_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await heartbeat_task
-
-    async def _heartbeat_loop(self, job_id: str) -> None:
-        interval = max(1.0, self._lease_seconds / 3.0)
-        while not self._stop_event.is_set():
-            await asyncio.sleep(interval)
-            self._container.job_repo.heartbeat_job(
-                job_id=job_id,
-                worker_id=self._worker_id,
-                lease_seconds=self._lease_seconds,
-            )
 
     async def run_forever(self) -> None:
-        active_tasks: set[asyncio.Task[str | None]] = set()
-        while not self._stop_event.is_set():
-            done = {t for t in active_tasks if t.done()}
-            active_tasks -= done
+        async def slot() -> None:
+            while not self._stop_event.is_set():
+                processed = await self.process_one_if_available()
+                if processed is None:
+                    try:
+                        await asyncio.wait_for(self._stop_event.wait(), self._poll_seconds)
+                    except TimeoutError:
+                        pass
 
-            while len(active_tasks) < self._max_concurrent:
-                job_id = await self.process_one_if_available()
-                if job_id is None:
-                    break
-            await asyncio.sleep(self._poll_seconds)
+        active_tasks = {asyncio.create_task(slot()) for _ in range(self._max_concurrent)}
+        try:
+            await asyncio.gather(*active_tasks)
+        finally:
+            for task in active_tasks:
+                task.cancel()
+            await asyncio.gather(*active_tasks, return_exceptions=True)
 
 
 async def _main() -> None:

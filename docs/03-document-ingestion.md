@@ -46,6 +46,7 @@ Mammoth converts the DOCX to **semantic HTML**, not a pixel-accurate Word layout
 - Split into bounded logical units at headings, table boundaries, or size limits, carrying brief adjacent context for continuity.
 - Preserve HTML/table structure where useful; sanitize HTML when rendering it or exposing it to consumers.
 - Track embedded images as referenced artifacts; attach them to relevant blocks where possible.
+- A block's `image_refs` contains every embedded image, with `image_ref` retained as the primary-image compatibility field. All images are loaded into model input; multi-image blocks cite the semantic block rather than falsely attributing the whole block to its first image. Existing stored DOCX units recover their image list from saved metadata.
 - A DOCX block does not have a reliable physical page number. Return block IDs/heading positions instead.
 - Some information can depend on styles/headers/footers/drawings that semantic conversion does not preserve. Surface conversion warnings, do not silently claim perfect fidelity.
 - If later evaluation demands exact page layout, an optional renderer can be introduced as a new adapter, without imposing LibreOffice on the MVP.
