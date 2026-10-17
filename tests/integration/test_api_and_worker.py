@@ -341,3 +341,78 @@ def test_http_api_worker_escalation_and_document_reuse(tmp_path: Path):
     assert ext2_resp.status_code == 202
     job2_id = ext2_resp.json()["job_id"]
     assert client.get(f"/v1/extractions/{job2_id}/result").status_code == 200
+
+
+def test_api_key_and_extension_hooks(tmp_path: Path):
+    from fastapi import Depends, Header
+
+    from ai_idp.adapters.outbound.storage.local import LocalDocumentBlobStore
+    from ai_idp.adapters.outbound.telemetry.otel import OpenTelemetryJsonlAdapter
+    from ai_idp.domain.errors import AuthenticationError
+
+    db_file = tmp_path / "hooks.sqlite3"
+    custom_blob_store = LocalDocumentBlobStore(tmp_path / "custom_storage")
+    custom_telemetry = OpenTelemetryJsonlAdapter(tmp_path / "custom_telemetry")
+    # pragma: allowlist nextline secret
+    test_api_key = "test-static-key-123"
+    settings = Settings(
+        database_url=f"sqlite:///{db_file.as_posix()}",
+        local_storage_root=tmp_path / "unused_storage",
+        local_telemetry_root=tmp_path / "unused_telemetry",
+        api_key=test_api_key,
+    )
+    container = build_container(
+        settings,
+        blob_store=custom_blob_store,
+        telemetry=custom_telemetry,
+        decision_engine=FakeDecisionEngine(),
+        extraction_engine=FakeExtractionEngine(),
+        create_tables=True,
+    )
+    assert container.blob_store is custom_blob_store
+    assert container.telemetry is custom_telemetry
+
+    app = create_app(container)
+    client = TestClient(app)
+
+    # Health remains unauthenticated
+    assert client.get("/health/live").status_code == 200
+
+    # /v1 requires static key when configured
+    unauth = client.get("/v1/documents/doc_missing")
+    assert unauth.status_code == 401
+    assert unauth.json()["code"] == "unauthorized"
+
+    # Bearer and X-API-Key both pass authentication (returning 404 for missing doc)
+    bearer_resp = client.get(
+        "/v1/documents/doc_missing",
+        headers={"Authorization": f"Bearer {test_api_key}"},
+    )
+    assert bearer_resp.status_code == 404
+
+    header_resp = client.get(
+        "/v1/documents/doc_missing",
+        headers={"X-API-Key": test_api_key},
+    )
+    assert header_resp.status_code == 404
+
+    # Custom v1_dependencies hook overrides default auth
+    seen_tenants: list[str] = []
+
+    async def custom_tenant_guard(
+        x_tenant_id: str | None = Header(default=None, alias="X-Tenant-Id"),
+    ) -> None:
+        if not x_tenant_id:
+            raise AuthenticationError("Missing X-Tenant-Id header.")
+        seen_tenants.append(x_tenant_id)
+
+    custom_app = create_app(container, v1_dependencies=[Depends(custom_tenant_guard)])
+    custom_client = TestClient(custom_app)
+    assert custom_client.get("/v1/documents/doc_missing").status_code == 401
+    assert (
+        custom_client.get(
+            "/v1/documents/doc_missing", headers={"X-Tenant-Id": "tenant_acme"}
+        ).status_code
+        == 404
+    )
+    assert seen_tenants == ["tenant_acme"]

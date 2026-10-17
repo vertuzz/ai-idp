@@ -57,9 +57,14 @@ class AppContainer:
 def build_container(
     settings: Settings | None = None,
     *,
+    blob_store: DocumentBlobStore | None = None,
+    document_reader: DocumentReader | None = None,
     decision_engine: DecisionEngine | None = None,
     extraction_engine: ExtractionEngine | None = None,
     relevance_engine: RelevanceEngine | None = None,
+    job_repo: JobRepository | None = None,
+    result_repo: ResultRepository | None = None,
+    telemetry: TelemetryPort | None = None,
     create_tables: bool = False,
 ) -> AppContainer:
     cfg = settings or get_settings()
@@ -68,9 +73,9 @@ def build_container(
         init_db_schema(engine)
     session_factory = build_session_factory(engine)
 
-    blob_store = LocalDocumentBlobStore(cfg.local_storage_root)
-    document_reader = IsolatedDocumentReader(cfg)
-    telemetry = OpenTelemetryJsonlAdapter(
+    resolved_blob_store = blob_store or LocalDocumentBlobStore(cfg.local_storage_root)
+    resolved_document_reader = document_reader or IsolatedDocumentReader(cfg)
+    resolved_telemetry = telemetry or OpenTelemetryJsonlAdapter(
         cfg.local_telemetry_root,
         max_bytes=cfg.telemetry_max_mib * 1024 * 1024,
         retained_files=cfg.telemetry_retained_files,
@@ -107,47 +112,49 @@ def build_container(
         max_output_tokens=cfg.max_output_tokens,
     )
 
-    job_repo = SqlAlchemyJobRepository(session_factory, cfg.max_concurrent_jobs)
-    result_repo = SqlAlchemyResultRepository(session_factory)
+    resolved_job_repo = job_repo or SqlAlchemyJobRepository(
+        session_factory, cfg.max_concurrent_jobs
+    )
+    resolved_result_repo = result_repo or SqlAlchemyResultRepository(session_factory)
 
     pipeline_service = ExtractionPipelineService(
-        blob_store=blob_store,
-        document_reader=document_reader,
+        blob_store=resolved_blob_store,
+        document_reader=resolved_document_reader,
         decision_engine=dec_engine,
         relevance_engine=relevance_engine
         or (dec_engine if decision_engine else GenerativeRelevanceEngine(ext_engine)),
         extraction_engine=ext_engine,
-        job_repo=job_repo,
-        result_repo=result_repo,
-        telemetry=telemetry,
+        job_repo=resolved_job_repo,
+        result_repo=resolved_result_repo,
+        telemetry=resolved_telemetry,
         lease_seconds=cfg.worker_lease_seconds,
     )
     ingest_use_case = IngestDocumentUseCase(
-        blob_store=blob_store,
-        document_reader=document_reader,
-        job_repo=job_repo,
-        telemetry=telemetry,
+        blob_store=resolved_blob_store,
+        document_reader=resolved_document_reader,
+        job_repo=resolved_job_repo,
+        telemetry=resolved_telemetry,
         max_upload_bytes=cfg.max_upload_bytes,
     )
     request_extraction_use_case = RequestExtractionUseCase(
-        job_repo=job_repo,
-        telemetry=telemetry,
+        job_repo=resolved_job_repo,
+        telemetry=resolved_telemetry,
         settings=cfg,
     )
     inspect_job_use_case = InspectJobUseCase(
-        job_repo=job_repo,
-        result_repo=result_repo,
+        job_repo=resolved_job_repo,
+        result_repo=resolved_result_repo,
     )
 
     return AppContainer(
         settings=cfg,
-        blob_store=blob_store,
-        document_reader=document_reader,
+        blob_store=resolved_blob_store,
+        document_reader=resolved_document_reader,
         decision_engine=dec_engine,
         extraction_engine=ext_engine,
-        job_repo=job_repo,
-        result_repo=result_repo,
-        telemetry=telemetry,
+        job_repo=resolved_job_repo,
+        result_repo=resolved_result_repo,
+        telemetry=resolved_telemetry,
         pipeline_service=pipeline_service,
         ingest_use_case=ingest_use_case,
         request_extraction_use_case=request_extraction_use_case,

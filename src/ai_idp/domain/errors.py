@@ -18,6 +18,11 @@ class DomainError(Exception):
             self.http_status = http_status
 
 
+class AuthenticationError(DomainError):
+    code = "unauthorized"
+    http_status = 401
+
+
 class UnsupportedMediaTypeError(DomainError):
     code = "unsupported_media_type"
     http_status = 415

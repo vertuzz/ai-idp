@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import secrets
 import tempfile
 import uuid
-from typing import Annotated
+from collections.abc import Sequence
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, File, Header, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
@@ -27,10 +29,14 @@ from ai_idp.adapters.inbound.http.schemas import (
     JobUsageResponse,
 )
 from ai_idp.adapters.inbound.http.telemetry import RequestTelemetryMiddleware
-from ai_idp.domain.errors import DomainError, UploadTooLargeError
+from ai_idp.domain.errors import AuthenticationError, DomainError, UploadTooLargeError
 
 
-def create_app(container: AppContainer | None = None) -> FastAPI:
+def create_app(
+    container: AppContainer | None = None,
+    *,
+    v1_dependencies: Sequence[Any] | None = None,
+) -> FastAPI:
     app = FastAPI(
         title="AI-IDP API",
         version="0.1.0",
@@ -46,6 +52,22 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
     async def ingestion_slot():
         async with ingestion_slots:
             yield
+
+    async def require_api_key(
+        request: Request,
+        authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+        x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    ) -> None:
+        expected = request.app.state.container.settings.api_key
+        if not expected:
+            return
+        token = ""
+        if authorization and authorization.lower().startswith("bearer "):
+            token = authorization[7:].strip()
+        elif x_api_key:
+            token = x_api_key.strip()
+        if not token or not secrets.compare_digest(token, expected):
+            raise AuthenticationError("Invalid or missing API key.")
 
     @app.exception_handler(RequestBodyTooLarge)
     async def handle_oversized_body(_request: Request, _exc: RequestBodyTooLarge) -> JSONResponse:
@@ -88,7 +110,10 @@ def create_app(container: AppContainer | None = None) -> FastAPI:
             },
         )
 
-    v1 = APIRouter(prefix="/v1")
+    router_dependencies = (
+        list(v1_dependencies) if v1_dependencies is not None else [Depends(require_api_key)]
+    )
+    v1 = APIRouter(prefix="/v1", dependencies=router_dependencies)
 
     @v1.post("/documents", status_code=201, response_model=DocumentUploadResponse)
     async def upload_document(

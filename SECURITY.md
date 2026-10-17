@@ -13,7 +13,7 @@ is still pending. See [deployment and release gates](docs/13-operations-and-rele
 - Treat document text as untrusted input to LLMs; document content must not override application instructions, authorize tool execution or request secret disclosure.
 - By default do not write source text, images, full prompts or API credentials to local trace/log exports.
 - OpenRouter processing involves third-party model providers. Deployers must ensure their document-processing policies allow such transfers.
-- Until explicit authentication and authorization are implemented, the service is intended for deployment only within a trusted network. Never expose the development API to the public internet without an access-control layer.
+- Until multi-user authentication and authorization are implemented, the service is intended for deployment only within a trusted network (optionally guarded by a static `AI_IDP_API_KEY` header on `/v1/*`). Never expose the development API to the public internet without an access-control layer.
 - Implement retention and deletion policies before using real sensitive documents.
 
 ## Reporting vulnerabilities

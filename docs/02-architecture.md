@@ -79,6 +79,7 @@ The VerificationEngine may start as an application service orchestrating a Decis
 - Caller schemas and industry semantics are supplied as data, not embedded in the core.
 - Model IDs, capabilities, prices and risk thresholds are configuration, not domain invariants.
 - Provider-specific response format details belong in adapters; domain stores normalized decisions.
+- `build_container()` accepts optional overrides for outbound ports (`blob_store`, `document_reader`, `decision_engine`, `extraction_engine`, `relevance_engine`, `job_repo`, `result_repo`, `telemetry`), and `create_app()` accepts optional `v1_dependencies` alongside an optional static `AI_IDP_API_KEY` guard so external wrappers can attach custom authentication, storage, or telemetry adapters without modifying the core.
 - All steps should be independently replayable for evaluation.
 
 ## Repository layout (target)

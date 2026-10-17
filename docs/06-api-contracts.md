@@ -145,10 +145,10 @@ profiles return 422; reuse of an idempotency key for a different request returns
 
 ## Errors and constraints
 
-Use standard HTTP status codes with structured error ID, machine-readable code, and human-readable message. Examples: unsupported_media_type, upload_too_large, invalid_schema, document_not_found, rate_limited, job_budget_exhausted.
+Use standard HTTP status codes with structured error ID, machine-readable code, and human-readable message. Examples: unauthorized, unsupported_media_type, upload_too_large, invalid_schema, document_not_found, rate_limited, job_budget_exhausted.
 
 Do not echo secret values or raw document content in error messages. Keep a versioned schema support statement (for example, explicit policy for $ref, unions, nested arrays) and validate schema complexity before starting expensive work.
 
 ## Asynchrony and future hosting
 
-The upload and extraction APIs are intentionally separate. Later a presigned S3 upload can replace multipart ingestion while keeping extraction requests unchanged. Authentication, tenant isolation, retention policies, webhooks, and billing are future SaaS capabilities, not implicit MVP functionality.
+The upload and extraction APIs are intentionally separate. Later a presigned S3 upload can replace multipart ingestion while keeping extraction requests unchanged. When `AI_IDP_API_KEY` is configured, `/v1/*` routes require `Authorization: Bearer <key>` or `X-API-Key: <key>` while `/health/*` stays unauthenticated; external wrappers can also inject custom router dependencies via `create_app(..., v1_dependencies=...)`. Multi-tenant isolation, retention policies, webhooks, and billing remain external SaaS capabilities, not implicit MVP functionality.

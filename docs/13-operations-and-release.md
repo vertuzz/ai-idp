@@ -3,7 +3,9 @@
 ## Deployment
 
 This is a single trusted deployment: one API and one or more workers share PostgreSQL,
-the same original/artifact storage and telemetry directory. Public authentication,
+the same original/artifact storage and telemetry directory. Setting `AI_IDP_API_KEY`
+enables a static shared-secret check (`Authorization: Bearer <key>` or `X-API-Key: <key>`)
+on `/v1/*` endpoints while leaving `/health/*` open; multi-user authentication,
 tenant isolation, billing and webhooks remain outside the MVP.
 
 Copy `.env.example` to an ignored `.env`, set the provider credential and database
