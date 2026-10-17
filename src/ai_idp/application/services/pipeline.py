@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import uuid
 from collections.abc import Awaitable, Callable
@@ -19,14 +20,19 @@ from ai_idp.application.ports.protocols import (
     ExtractionEngine,
     JobRepository,
     ModalityResult,
-    RelevanceResult,
+    RelevanceBatchResult,
+    RelevanceEngine,
     ResultRepository,
     TelemetryPort,
     UnitInputPayload,
     VerificationBatchResult,
 )
 from ai_idp.application.services.batching import unit_batches
-from ai_idp.application.services.request_budget import RequestBudget, active_request_budget
+from ai_idp.application.services.request_budget import (
+    RequestBudget,
+    active_job_request_budget,
+    active_request_budget,
+)
 from ai_idp.domain.enums import (
     FieldStatus,
     JobStage,
@@ -77,6 +83,25 @@ def _guess_image_media_type(image_ref: str) -> str:
     return "image/png"
 
 
+async def _run_bounded[T](calls: list[Callable[[], Awaitable[T]]], limit: int) -> list[T]:
+    """Keep only a bounded number of workers; cancel and drain siblings on failure."""
+    pending = iter(enumerate(calls))
+    results: list[Any] = [None] * len(calls)
+
+    async def worker() -> None:
+        for index, call in pending:
+            results[index] = await call()
+
+    tasks = [asyncio.create_task(worker()) for _ in range(min(limit, len(calls)))]
+    try:
+        await asyncio.gather(*tasks)
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+    return results
+
+
 class ExtractionPipelineService:
     """Orchestrates the 10-step AI-IDP extraction, verification, and escalation pipeline."""
 
@@ -86,6 +111,7 @@ class ExtractionPipelineService:
         blob_store: DocumentBlobStore,
         document_reader: DocumentReader,
         decision_engine: DecisionEngine,
+        relevance_engine: RelevanceEngine | None = None,
         extraction_engine: ExtractionEngine,
         job_repo: JobRepository,
         result_repo: ResultRepository,
@@ -95,6 +121,7 @@ class ExtractionPipelineService:
         self._blob_store = blob_store
         self._document_reader = document_reader
         self._decision_engine = decision_engine
+        self._relevance_engine = relevance_engine or decision_engine
         self._extraction_engine = extraction_engine
         self._job_repo = job_repo
         self._result_repo = result_repo
@@ -131,10 +158,21 @@ class ExtractionPipelineService:
             )
 
             async def timed_execution():
+                current = self._job_repo.get_job(job_id)
+                budget = RequestBudget(
+                    current.configuration.max_model_calls - current.usage.llm_calls,
+                    cost_limit=(
+                        current.configuration.max_job_estimated_cost_usd
+                        - current.usage.estimated_cost_usd
+                    ),
+                )
+                token = active_job_request_budget.set(budget)
                 try:
                     return await asyncio.wait_for(self._execute_job(job_id), max(0, remaining))
                 except TimeoutError as exc:
                     raise JobTimeLimitExceededError("Extraction job time limit exceeded.") from exc
+                finally:
+                    active_job_request_budget.reset(token)
 
             execution = asyncio.create_task(timed_execution())
             heartbeat = asyncio.create_task(self._renew_lease(job_id, owner))
@@ -192,11 +230,14 @@ class ExtractionPipelineService:
             raise BudgetExhaustedError(f"Job '{job_id}' exhausted its model-call budget.")
         if self._job_repo.is_cancelled(job_id):
             raise JobLeaseLostError(f"Job '{job_id}' was cancelled.")
-        request_budget = RequestBudget(job.configuration.max_model_calls - job.usage.llm_calls)
+        request_budget = RequestBudget(
+            job.configuration.max_model_calls - job.usage.llm_calls,
+            parent=active_job_request_budget.get(),
+        )
         token = active_request_budget.set(request_budget)
         try:
             result = await call()
-        except Exception:
+        except BaseException:
             if request_budget.used:
                 self._result_repo.record_usage(
                     UsageRecord(
@@ -213,6 +254,15 @@ class ExtractionPipelineService:
             active_request_budget.reset(token)
         if getattr(result, "usage", None) and request_budget.used:
             result.usage.call_count = request_budget.used
+        usage = getattr(result, "usage", None)
+        if usage:
+            if request_budget.parent is not None and not request_budget.used:
+                # Non-HTTP adapters still participate in the shared execution budget.
+                for _ in range(usage.call_count):
+                    request_budget.reserve()
+            request_budget.report_cost(
+                max(0.0, usage.estimated_cost_usd - request_budget.reported_cost)
+            )
         self._result_repo.save_step(
             job_id, key, adapter.dump_python(result, mode="json"), getattr(result, "usage", None)
         )
@@ -525,16 +575,20 @@ class ExtractionPipelineService:
 
             # Step 4 & 5: Modality Selection
             self._job_repo.update_job_progress(job_id, stage=JobStage.SELECTING_MODALITY)
-            unit_modalities: dict[str, Modality] = {}
-            for uid in selected_unit_ids:
-                payload = payload_by_id[uid]
-                modality = await self._determine_unit_modality(
-                    job=job,
-                    spec=spec,
-                    payload=payload,
-                    record_usage=record_usage,
-                )
-                unit_modalities[uid] = modality
+            modalities = await _run_bounded(
+                [
+                    partial(
+                        self._determine_unit_modality,
+                        job=job,
+                        spec=spec,
+                        payload=payload_by_id[uid],
+                        record_usage=record_usage,
+                    )
+                    for uid in selected_unit_ids
+                ],
+                config.max_parallel_decision_batches,
+            )
+            unit_modalities = dict(zip(selected_unit_ids, modalities, strict=True))
 
             if check_cancelled():
                 return self._build_cancelled_result(job_id, spec)
@@ -825,10 +879,6 @@ class ExtractionPipelineService:
             else:
                 texts.append(None)
 
-        document_context = f"Extraction instructions: {instructions}\n" + "\n\n".join(
-            f"Unit {unit.unit_id} ({unit.source_locator}):\n{text or ''}"
-            for unit, text in zip(units, texts, strict=True)
-        )
         payloads: list[UnitInputPayload] = []
         for idx, u in enumerate(units):
             img_bytes: bytes | None = None
@@ -851,7 +901,7 @@ class ExtractionPipelineService:
                         (self._blob_store.get_bytes(ref), _guess_image_media_type(ref))
                         for ref in image_refs[1:]
                     ],
-                    document_context=document_context,
+                    document_context="",
                     extraction_instructions=instructions,
                 )
             )
@@ -875,56 +925,91 @@ class ExtractionPipelineService:
         unit_max_score: dict[str, float] = {}
         field_unit_scores: dict[str, list[tuple[float, str]]] = {f.path: [] for f in spec.fields}
 
-        for idx, payload in enumerate(unit_payloads, start=1):
-            with self._telemetry.span(
-                "pipeline.score_unit_relevance",
-                {"job_id": job.job_id, "unit_id": payload.unit.unit_id},
+        page_limit = (
+            min(config.relevance_batch_units, config.max_decision_questions_per_call)
+            if config.batch_relevance_questions
+            else 1
+        )
+        batches = unit_batches(
+            [(payload, Modality.TEXT_AND_VISION) for payload in unit_payloads],
+            max_units=page_limit,
+            max_bytes=config.max_model_input_bytes,
+            max_images=config.max_decision_images_per_call,
+        )
+        calls = []
+        completed_pairs: dict[str, int] = {p.unit.unit_id: 0 for p in unit_payloads}
+
+        async def score_group(payloads, fields):
+            identity = json.dumps(
+                [[p.unit.unit_id for p in payloads], [f.path for f in fields]]
+            ).encode()
+            key = "relevance:v3:" + hashlib.sha256(identity).hexdigest()[:32]
+            part = await self._model_step(
+                job.job_id,
+                key,
+                RelevanceBatchResult,
+                partial(
+                    (
+                        self._relevance_engine
+                        if config.relevance_strategy == "generative"
+                        else self._decision_engine
+                    ).score_relevance_batch,
+                    job_id=job.job_id,
+                    unit_payloads=payloads,
+                    fields=fields,
+                    instructions=spec.instructions,
+                    model_id=(
+                        config.relevance_model
+                        if config.relevance_strategy == "generative"
+                        else config.decision_model
+                    ),
+                ),
+            )
+            expected_ids = {p.unit.unit_id for p in payloads}
+            if set(part.results) != expected_ids or any(
+                set(result.field_scores) != {f.path for f in fields}
+                for result in part.results.values()
             ):
-                width = 24 if config.batch_relevance_questions else 1
-                groups = [spec.fields[i : i + width] for i in range(0, len(spec.fields), width)]
-                rel = RelevanceResult(unit_id=payload.unit.unit_id)
-                for gi, group in enumerate(groups):
-                    key = f"relevance:{payload.unit.unit_id}"
-                    if len(groups) > 1:
-                        key += f":questions:{gi}"
-                    part = await self._model_step(
-                        job.job_id,
-                        key,
-                        RelevanceResult,
-                        partial(
-                            self._decision_engine.score_relevance,
-                            job_id=job.job_id,
-                            unit_payload=payload,
-                            fields=group,
-                            instructions=spec.instructions,
-                            model_id=config.decision_model,
-                            batch_questions=True,
-                        ),
-                    )
-                    self._result_repo.record_decisions(part.decision_records)
-                    record_usage(part.usage)
-                    rel.field_scores.update(part.field_scores)
+                raise ProviderError(
+                    "Relevance response omitted or changed requested unit/field pairs."
+                )
+            for uid, result in part.results.items():
+                self._result_repo.record_decisions(result.decision_records)
+                for field in fields:
+                    score = result.field_scores[field.path]
+                    field_unit_scores[field.path].append((score, uid))
+                    unit_max_score[uid] = max(unit_max_score.get(uid, 0.0), score)
+                completed_pairs[uid] += len(fields)
+            record_usage(part.usage)
+            progress.units_scored = sum(n == len(spec.fields) for n in completed_pairs.values())
+            self._job_repo.update_job_progress(job.job_id, progress=progress)
 
-                max_s = 0.0
-                for f in spec.fields:
-                    score = float(rel.field_scores.get(f.path, 0.0))
-                    field_unit_scores[f.path].append((score, payload.unit.unit_id))
-                    if score > max_s:
-                        max_s = score
-                unit_max_score[payload.unit.unit_id] = max_s
-
-                progress.units_scored = idx
-                self._job_repo.update_job_progress(job.job_id, progress=progress)
+        for batch in batches:
+            payloads = [p for p, _ in batch]
+            width = (
+                max(1, config.max_decision_questions_per_call // len(payloads))
+                if config.batch_relevance_questions
+                else 1
+            )
+            for start in range(0, len(spec.fields), width):
+                calls.append(partial(score_group, payloads, spec.fields[start : start + width]))
+        await _run_bounded(calls, config.max_parallel_decision_batches)
 
         selected_set: set[str] = set()
         for uid, score in unit_max_score.items():
-            if score >= config.relevance_threshold:
+            selected = (
+                score == 1.0
+                if config.relevance_strategy == "generative"
+                else score >= config.relevance_threshold
+            )
+            if selected:
                 selected_set.add(uid)
 
         # Ensure top-K per field fallback so relevant pages are not missed
         top_k = max(1, config.relevance_top_k)
         for _f_path, scored_list in field_unit_scores.items():
-            ranked = sorted(scored_list, key=lambda item: item[0], reverse=True)
+            order = {p.unit.unit_id: i for i, p in enumerate(unit_payloads)}
+            ranked = sorted(scored_list, key=lambda item: (-item[0], order[item[1]]))
             for _score, uid in ranked[:top_k]:
                 selected_set.add(uid)
 
@@ -937,6 +1022,7 @@ class ExtractionPipelineService:
                 "selected_unit_ids": ordered_selected,
                 "field_unit_scores": field_unit_scores,
                 "threshold": config.relevance_threshold,
+                "strategy": config.relevance_strategy,
                 "top_k": config.relevance_top_k,
             },
             None,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,12 @@ class Settings(BaseSettings):
     decision_model: str = Field(
         default="perplexity/pplx-decider-v1.2",
         validation_alias=AliasChoices("AI_IDP_DECISION_MODEL", "OPENROUTER_DECISION_MODEL"),
+    )
+    relevance_model: str = Field(
+        default="anthropic/claude-haiku-5.5", validation_alias="AI_IDP_RELEVANCE_MODEL"
+    )
+    relevance_strategy: Literal["generative", "decisions"] = Field(
+        default="decisions", validation_alias="RELEVANCE_STRATEGY"
     )
     extraction_model: str = Field(
         default="anthropic/claude-haiku-5.5",
@@ -74,15 +81,17 @@ class Settings(BaseSettings):
     document_memory_mib: int = Field(default=1024, ge=1, validation_alias="DOCUMENT_MEMORY_MIB")
     max_concurrent_jobs: int = Field(default=2, ge=1, validation_alias="MAX_CONCURRENT_JOBS")
     max_concurrent_model_requests: int = Field(
-        default=6,
+        default=12,
         ge=1,
         validation_alias="MAX_CONCURRENT_MODEL_REQUESTS",
     )
     per_model_concurrency: dict[str, int] = Field(
-        default={"*": 2}, validation_alias="PER_MODEL_CONCURRENCY"
+        default={"*": 8},
+        validation_alias="PER_MODEL_CONCURRENCY",
     )
     model_requests_per_minute: dict[str, int] = Field(
-        default={"*": 60}, validation_alias="MODEL_REQUESTS_PER_MINUTE"
+        default={"*": 240},
+        validation_alias="MODEL_REQUESTS_PER_MINUTE",
     )
     provider_timeout_seconds: float = Field(
         default=120, gt=0, validation_alias="PROVIDER_TIMEOUT_SECONDS"
@@ -107,6 +116,15 @@ class Settings(BaseSettings):
         default=20 * 1024 * 1024, ge=1024, validation_alias="MAX_MODEL_INPUT_BYTES"
     )
     max_units_per_call: int = Field(default=12, ge=2, validation_alias="MAX_UNITS_PER_CALL")
+    relevance_batch_units: int = Field(
+        default=1, ge=1, le=64, validation_alias="RELEVANCE_BATCH_UNITS"
+    )
+    max_decision_questions_per_call: int = Field(
+        default=24, ge=1, le=256, validation_alias="MAX_DECISION_QUESTIONS_PER_CALL"
+    )
+    max_parallel_decision_batches: int = Field(
+        default=8, ge=1, le=32, validation_alias="MAX_PARALLEL_DECISION_BATCHES"
+    )
     max_decision_images_per_call: int = Field(
         default=8, ge=1, validation_alias="MAX_DECISION_IMAGES_PER_CALL"
     )

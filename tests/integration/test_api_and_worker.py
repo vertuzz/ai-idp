@@ -10,6 +10,7 @@ from ai_idp.adapters.inbound.http.dependencies import build_container
 from ai_idp.application.ports.protocols import (
     ExtractionBatchResult,
     ModalityResult,
+    RelevanceBatchResult,
     RelevanceResult,
     UnitInputPayload,
     VerificationBatchResult,
@@ -37,6 +38,16 @@ class FakeDecisionEngine:
         self._contradict_set = contradict_first_attempt_for or set()
         self._verify_counts: dict[str, int] = {}
 
+    async def score_relevance_batch(self, job_id, unit_payloads, fields, instructions, model_id):
+        import uuid
+
+        results = {}
+        for payload in unit_payloads:
+            result = await self.score_relevance(job_id, payload, fields, instructions, model_id)
+            results[result.unit_id] = result
+        usage = next(iter(results.values())).usage.model_copy(update={"usage_id": uuid.uuid4().hex})
+        return RelevanceBatchResult(results=results, usage=usage)
+
     async def score_relevance(
         self,
         job_id: str,
@@ -53,7 +64,7 @@ class FakeDecisionEngine:
         dists = {f.path: {"true": prob, "false": round(1.0 - prob, 4)} for f in fields}
         records = [
             DecisionRecord(
-                decision_id=f"dec_rel_{job_id}_{uid}_{idx}",
+                decision_id=f"dec_rel_{job_id}_{uid}_{f.path}",
                 job_id=job_id,
                 unit_id=uid,
                 field_path=f.path,

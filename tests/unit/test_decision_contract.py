@@ -107,6 +107,57 @@ async def test_missing_verification_answer_fails_closed():
         await engine.verify_fields("j", [(spec.fields[0], "invented", [])], {}, "model")
 
 
+async def test_relevance_batch_maps_each_unit_field_and_shares_context_once():
+    engine = OpenRouterDecisionEngine(api_key="unused")
+    engine._post_decisions = AsyncMock(
+        return_value=(
+            {
+                "answers": {
+                    "unit_0_field_0": 0.9,
+                    "unit_0_field_1": 0.2,
+                    "unit_1_field_0": 0.1,
+                    "unit_1_field_1": 0.8,
+                }
+            },
+            7,
+        )
+    )
+    spec = normalize_extraction_schema(
+        {
+            "type": "object",
+            "properties": {"title": {"type": "string"}, "amount": {"type": "number"}},
+        }
+    )
+    payloads = [
+        UnitInputPayload(
+            unit=DocumentUnit(
+                unit_id=uid,
+                document_id="d",
+                ordinal=i,
+                kind=UnitKind.PDF_PAGE,
+                source_locator={"page": i},
+            ),
+            native_text="text " + uid,
+            image_bytes=uid.encode(),
+            document_context="SHARED_CONTEXT_TAIL",
+        )
+        for i, uid in enumerate(["first", "last"], start=1)
+    ]
+    result = await engine.score_relevance_batch("j", payloads, spec.fields, "guidance", "m")
+    assert result.results["first"].field_scores == {"/title": 0.9, "/amount": 0.2}
+    assert result.results["last"].field_scores == {"/title": 0.1, "/amount": 0.8}
+    _, state, questions = engine._post_decisions.call_args.args
+    assert str(state).count("SHARED_CONTEXT_TAIL") == 1
+    assert len([p for p in state if isinstance(p, dict)]) == 2
+    assert '"last"' in questions["unit_1_field_0"]["instructions"]
+    assert all(r.usage is None for r in result.results.values())
+    assert result.usage.call_count == 1
+    assert sum(len(r.decision_records) for r in result.results.values()) == 4
+    engine._post_decisions.return_value = ({"answers": {"unit_0_field_0": 0.9}}, 7)
+    with pytest.raises(ProviderError):
+        await engine.score_relevance_batch("j", payloads, spec.fields, "guidance", "m")
+
+
 def test_missing_enum_and_const_values_fit_internal_envelope():
     import jsonschema
 

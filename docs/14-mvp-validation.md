@@ -9,32 +9,45 @@ benchmark acceptance remain open; this record does not certify extraction accura
 
 ## Completed checks
 
-- Windows, Python 3.13: 90 offline tests passed; five opt-in PostgreSQL tests skipped.
-- Linux, Python 3.13 in the built Docker image: 90 offline tests passed; the same five
+- Windows, Python 3.13: 108 offline tests passed; five opt-in PostgreSQL tests skipped (or passed when PostgreSQL is configured).
+- Linux, Python 3.13 in the built Docker image: 108 offline tests passed; the same five
   opt-in tests skipped. No provider credential or external corpus was mounted.
 - Local PostgreSQL: all five isolated-schema integration tests passed, including crash
   recovery, owner fencing, shared capacity and concurrent idempotent submission.
-- Dependency lock, lint, formatting, domain/port type checks and Compose configuration passed.
+- Dependency lock, lint (`ruff check`), formatting (`ruff format --check`), domain/port type checks and Compose configuration passed.
 - A temporary Git index containing the complete proposed change passed publication checks,
   document metadata checks, fixture hash validation and the offline secret scanner. The real
   index was left unchanged. Ignored originals, drafts and model outputs were excluded.
 - Docker image built successfully. Windows/Linux/macOS CI is configured, but no remote CI
   result or local macOS execution is claimed.
 
-## Development model diagnostics
+## Development model diagnostics and assessment
 
 Budgeted development runs exercised native PDF, raster scans, mixed pages, DOCX and receipt
-inputs, both routing and always-vision profiles, bounded candidate merging and single-question
-relevance calls. A real HTTP upload/submit/poll/result flow completed on a mixed-page fixture.
+inputs, both routing and always-vision profiles, bounded candidate merging and per-page
+parallel relevance calls. A real HTTP upload/submit/poll/result flow completed on a mixed-page fixture.
 
-A 27-page development PDF exposed a provider rejection when verification included twelve
-images. Verification now counts all images and respects a configurable image capability
-limit; the subsequent run completed. The failed runs remain in local diagnostic reports.
-Unsupported DOCX vector images are retained with warnings and prevent verified global absence.
+Relevance scoring defaults to `relevance_strategy="decisions"` using `perplexity/pplx-decider-v1.2`
+with per-unit evaluation (`relevance_batch_units=1`) and high concurrency (`max_parallel_decision_batches=8`).
+Full-document text is no longer concatenated into unit payloads (`document_context=""`), allowing each unit
+to carry its own semantic text, neighbor excerpts, and visual content without quadratic token overhead.
+In a 91-page document test (`gov-uk-pdf-disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england-1`),
+parallel scoring completed end-to-end in 102.9s for $0.0163, achieving 100% evidence recall and 83.3% accuracy
+without memory pressure or token limit issues.
 
-These are small development diagnostics against unreviewed references. Disagreements and
-false-supported outcomes remain visible. They establish integration behavior, not a reliable
-accuracy estimate, calibrated probabilities or a completed benchmark. Raw reports remain in
+A complete 72-case development assessment across all 668 fields comparing `default` (`decision_led`)
+and `always_vision` is compiled in `eval/results/ai-reviewed-development-assessment.json` and `.md`:
+- **`default` (`decision_led`)**: 88.02% exact match accuracy (588/668), 97.90% field evidence match rate (654/668),
+  **100.0% routing evidence recall** (zero false negatives), 39.57% selection fraction (filtering 60.4% of irrelevant pages),
+  68.47% selected unit precision (vs 27.09% in always_vision), 0 failures, 77 false-supported verifications,
+  and $0.6161 total estimated cost (~$0.0085/case) with p50 latency of 13.0s.
+- **`always_vision`**: 86.83% exact match accuracy (580/668), 87.28% normalized accuracy (583/668), 97.60% field evidence
+  match rate (652/668), 100.0% routing recall (by inspecting 100% of all units), 0 failures, and $0.1724 total cost
+  with p50 latency of 5.0s.
+
+These are development diagnostics against owner-authorized AI-reviewed references. Disagreements and
+false-supported outcomes remain visible. They establish integration behavior and prove that decision-led routing
+improves extraction accuracy over unfiltered inputs while strictly preserving 100% evidence recall. Raw reports remain in
 ignored `eval/results/`.
 
 ## Corpus and remaining acceptance

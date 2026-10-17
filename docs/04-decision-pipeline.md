@@ -47,6 +47,37 @@ Use OpenRouter Decisions API (`POST /api/alpha/decisions`) through a dedicated h
 
 A model may accept multiple named questions about one state, but batching can change accuracy. Benchmark one question per call versus grouped field questions, especially for the smaller Flash variant.
 
+Pipeline v3 evaluates candidate units per relevance request. The default
+`RELEVANCE_STRATEGY=decisions` uses the configured decision model (`AI_IDP_DECISION_MODEL`,
+`perplexity/pplx-decider-v1.2`) for named questions and preserves its raw probability vectors.
+Every matrix entry or question names a specific unit ID, source locator and target field;
+the response retains an independent answer for every unit/field pair.
+
+The alternative `RELEVANCE_STRATEGY=generative` uses `AI_IDP_RELEVANCE_MODEL` (the configured
+Haiku baseline) to return a structured unit/field boolean matrix in one model response.
+`true` is relevant, `false` is clearly irrelevant, and `null` is uncertain and retained.
+The matrix must contain every requested pair with the correct types. These are selection
+flags, never calibrated probabilities: decision records preserve the raw boolean/null,
+contain no invented probability vector, and field verification stays with the separate
+decision model. The existing relevance threshold applies only to Decisions probabilities;
+binary/uncertain selection flags are retained directly. Evidence on another
+page must not make the named candidate relevant. No document text or source image is
+silently removed to fit a request.
+
+`RELEVANCE_BATCH_UNITS` defaults to one. Groups also respect the image and input-byte
+limits, and split field questions to respect `MAX_DECISION_QUESTIONS_PER_CALL` (24 by
+default, counting unit/field pairs). `MAX_PARALLEL_DECISION_BATCHES` defaults to eight;
+it bounds relevance workers and selected-unit modality workers within each job. The
+shared global/per-model concurrency and rate limits still apply across all jobs.
+Per-field top-K fallbacks are unchanged; equal scores use source order,
+not request completion order. Progress counts units whose field questions have all
+finished. Completed groups are checkpointed individually and reused after a retry.
+
+For a sequential single-unit comparison, set `RELEVANCE_BATCH_UNITS=1` and
+`MAX_PARALLEL_DECISION_BATCHES=1`. Unbatched-question evaluation additionally sends
+one unit/field pair per request. Compare speed, cost and evidence-unit recall on the
+same development cases before attributing improvements to grouping.
+
 Persist: model ID, provider API version, question set/version, state artifact IDs/hashes, probability distribution, chosen option, latency, usage where available, failure status and retry count.
 
 ## Failure and uncertainty

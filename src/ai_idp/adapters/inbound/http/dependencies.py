@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from ai_idp.adapters.outbound.documents.isolated_reader import IsolatedDocumentReader
 from ai_idp.adapters.outbound.openrouter.decisions_client import OpenRouterDecisionEngine
 from ai_idp.adapters.outbound.openrouter.extraction_client import PydanticAIExtractionEngine
+from ai_idp.adapters.outbound.openrouter.relevance_client import GenerativeRelevanceEngine
 from ai_idp.adapters.outbound.persistence.database import (
     build_engine,
     build_session_factory,
@@ -24,6 +25,7 @@ from ai_idp.application.ports.protocols import (
     DocumentReader,
     ExtractionEngine,
     JobRepository,
+    RelevanceEngine,
     ResultRepository,
     TelemetryPort,
 )
@@ -57,6 +59,7 @@ def build_container(
     *,
     decision_engine: DecisionEngine | None = None,
     extraction_engine: ExtractionEngine | None = None,
+    relevance_engine: RelevanceEngine | None = None,
     create_tables: bool = False,
 ) -> AppContainer:
     cfg = settings or get_settings()
@@ -111,6 +114,8 @@ def build_container(
         blob_store=blob_store,
         document_reader=document_reader,
         decision_engine=dec_engine,
+        relevance_engine=relevance_engine
+        or (dec_engine if decision_engine else GenerativeRelevanceEngine(ext_engine)),
         extraction_engine=ext_engine,
         job_repo=job_repo,
         result_repo=result_repo,

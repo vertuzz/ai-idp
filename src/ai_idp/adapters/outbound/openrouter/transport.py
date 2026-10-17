@@ -40,7 +40,7 @@ class LimitedTransport(httpx.AsyncBaseTransport):
                     self.reported_cost += cost
                     self.cost_known = True
                     if budget:
-                        budget.reported_cost += cost
+                        budget.report_cost(cost)
             except (ValueError, AttributeError, TypeError):
                 pass
             return response

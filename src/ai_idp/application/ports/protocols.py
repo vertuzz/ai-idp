@@ -41,10 +41,18 @@ class UnitInputPayload:
 
 @dataclass(slots=True)
 class RelevanceResult:
+    """Selection scores: provider probabilities or binary flags; never fabricated confidence."""
+
     unit_id: str
     field_scores: dict[str, float] = field(default_factory=dict)
     raw_distributions: dict[str, dict[str, float]] = field(default_factory=dict)
     decision_records: list[DecisionRecord] = field(default_factory=list)
+    usage: UsageRecord | None = None
+
+
+@dataclass(slots=True)
+class RelevanceBatchResult:
+    results: dict[str, RelevanceResult] = field(default_factory=dict)
     usage: UsageRecord | None = None
 
 
@@ -91,7 +99,18 @@ class DocumentReader(Protocol):
     ) -> list[DocumentUnit]: ...
 
 
-class DecisionEngine(Protocol):
+class RelevanceEngine(Protocol):
+    async def score_relevance_batch(
+        self,
+        job_id: str,
+        unit_payloads: list[UnitInputPayload],
+        fields: list[TargetFieldSpec],
+        instructions: str,
+        model_id: str,
+    ) -> RelevanceBatchResult: ...
+
+
+class DecisionEngine(RelevanceEngine, Protocol):
     async def score_relevance(
         self,
         job_id: str,

@@ -30,6 +30,8 @@ def build_pipeline_config(
         model_profile=model_profile,
         pipeline_mode=mode,
         decision_model=settings.decision_model,
+        relevance_model=settings.relevance_model,
+        relevance_strategy=settings.relevance_strategy,
         extraction_model=settings.extraction_model,
         escalation_model=settings.escalation_model,
         relevance_threshold=settings.relevance_threshold,
@@ -42,18 +44,21 @@ def build_pipeline_config(
         max_model_calls=settings.max_model_calls,
         max_model_input_bytes=settings.max_model_input_bytes,
         max_units_per_call=settings.max_units_per_call,
+        relevance_batch_units=settings.relevance_batch_units,
+        max_decision_questions_per_call=settings.max_decision_questions_per_call,
+        max_parallel_decision_batches=settings.max_parallel_decision_batches,
         max_decision_images_per_call=settings.max_decision_images_per_call,
         max_prepared_input_bytes=settings.max_prepared_input_mib * 1024 * 1024,
         model_parameters={"temperature": 0.0, "max_output_tokens": settings.max_output_tokens},
         prompt_versions={
-            "relevance": "v2",
+            "relevance": "v3",
             "modality": "v2",
             "extraction": "v2",
             "verification": "v2",
         },
     )
     if overrides:
-        cfg = cfg.model_copy(update=overrides)
+        cfg = PipelineConfiguration.model_validate({**cfg.model_dump(), **overrides})
     return cfg
 
 

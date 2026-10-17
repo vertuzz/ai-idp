@@ -47,6 +47,16 @@ DOCX blocks retain every embedded image. Unsupported embedded formats such as EM
 
 All execution paths, including `run_inline=true` and evaluations, take renewable exclusive job leases. Finished model calls are checkpointed with their usage and reused on retry. A crash between a provider response and durable checkpoint storage can still require repeating that call; spending limits are estimates checked before each new call and after reported usage, not hard provider billing caps.
 
+Relevance scoring uses the decision classifier by default (`RELEVANCE_STRATEGY=decisions`,
+`perplexity/pplx-decider-v1.2`) or generative scoring (`RELEVANCE_STRATEGY=generative`,
+`AI_IDP_RELEVANCE_MODEL`), evaluating one source unit per request (`RELEVANCE_BATCH_UNITS=1`)
+and processing up to eight batches concurrently (`MAX_PARALLEL_DECISION_BATCHES=8`) by default.
+Answers remain separate for every unit and target field. Image/byte/question limits, shared provider
+capacity and job-wide physical request budgets apply to all parallel calls. Configure
+`RELEVANCE_STRATEGY`, `AI_IDP_DECISION_MODEL`, `AI_IDP_RELEVANCE_MODEL`, `RELEVANCE_BATCH_UNITS`,
+`MAX_DECISION_QUESTIONS_PER_CALL` and
+`MAX_PARALLEL_DECISION_BATCHES`; see the [decision pipeline](docs/04-decision-pipeline.md).
+
 PostgreSQL concurrency and recovery regressions are opt-in: set `AI_IDP_TEST_POSTGRES_URL` to a development database and run `uv run --group dev --group evaluation python -m pytest -q tests/integration/test_postgres_leases.py`. Tests migrate and remove their own isolated schemas and make no model calls. CI configures offline tests on Windows, Linux and macOS and a separate PostgreSQL job.
 
 For a complete client example, start API and worker and run:

@@ -250,6 +250,64 @@ class PydanticAIExtractionEngine:
                     user_parts.append(f"Unit Image ({u.unit_id}, image {idx}):")
                     user_parts.append(BinaryContent(data=content, media_type=media_type))
 
+        output_dict, usage_record = await self.run_structured(
+            job_id=job_id,
+            model_id=model_id,
+            stage_name=stage_name,
+            schema=envelope_schema,
+            system_instructions=system_instructions,
+            user_parts=user_parts,
+        )
+
+        extracted_data, raw_evidences = _unpack_envelope_output(output_dict, target_fields)
+
+        evidence_by_field: dict[str, list[Evidence]] = {f.path: [] for f in target_fields}
+        name_to_path = {f.name: f.path for f in target_fields}
+
+        for item in raw_evidences:
+            if not isinstance(item, dict):
+                continue
+            raw_path = str(item.get("field_path") or "").strip()
+            if not raw_path:
+                continue
+            if not raw_path.startswith("/"):
+                raw_path = name_to_path.get(raw_path, f"/{raw_path}")
+            matched_path = raw_path if raw_path in evidence_by_field else None
+            if matched_path is None:
+                top_seg = "/" + raw_path.lstrip("/").split("/")[0]
+                if top_seg in evidence_by_field:
+                    matched_path = raw_path
+                    evidence_by_field.setdefault(matched_path, [])
+            if matched_path is None:
+                continue
+            uid = str(item.get("unit_id") or "").strip()
+            quote = item.get("quote")
+            evidence_by_field[matched_path].append(
+                Evidence(
+                    unit_id=uid,
+                    locator={},
+                    quote=str(quote) if quote is not None else None,
+                )
+            )
+
+        return ExtractionBatchResult(
+            data=extracted_data,
+            evidence_by_field=evidence_by_field,
+            model_id=model_id,
+            usage=usage_record,
+        )
+
+    async def run_structured(
+        self,
+        *,
+        job_id: str,
+        model_id: str,
+        stage_name: str,
+        schema: dict[str, Any],
+        system_instructions: str,
+        user_parts: list[Any],
+    ) -> tuple[dict[str, Any], UsageRecord]:
+        """Shared bounded transport and usage accounting for structured model tasks."""
         transport = (
             LimitedTransport(self._limiter, self._max_input_bytes) if self._limiter else None
         )
@@ -262,9 +320,9 @@ class PydanticAIExtractionEngine:
         agent = Agent(
             model=chat_model,
             output_type=StructuredDict(
-                envelope_schema,
-                name="extraction_envelope",
-                description="Extracted field values and supporting unit evidence.",
+                schema,
+                name="model_output",
+                description="Structured model output matching the requested schema.",
             ),
             system_prompt=system_instructions,
             retries=self._max_retries,
@@ -299,38 +357,6 @@ class PydanticAIExtractionEngine:
                 await client.aclose()
             latency_ms = int((time.perf_counter() - t0) * 1000)
 
-        output_dict = run_result.output if isinstance(run_result.output, dict) else {}
-        extracted_data, raw_evidences = _unpack_envelope_output(output_dict, target_fields)
-
-        evidence_by_field: dict[str, list[Evidence]] = {f.path: [] for f in target_fields}
-        name_to_path = {f.name: f.path for f in target_fields}
-
-        for item in raw_evidences:
-            if not isinstance(item, dict):
-                continue
-            raw_path = str(item.get("field_path") or "").strip()
-            if not raw_path:
-                continue
-            if not raw_path.startswith("/"):
-                raw_path = name_to_path.get(raw_path, f"/{raw_path}")
-            matched_path = raw_path if raw_path in evidence_by_field else None
-            if matched_path is None:
-                top_seg = "/" + raw_path.lstrip("/").split("/")[0]
-                if top_seg in evidence_by_field:
-                    matched_path = raw_path
-                    evidence_by_field.setdefault(matched_path, [])
-            if matched_path is None:
-                continue
-            uid = str(item.get("unit_id") or "").strip()
-            quote = item.get("quote")
-            evidence_by_field[matched_path].append(
-                Evidence(
-                    unit_id=uid,
-                    locator={},
-                    quote=str(quote) if quote is not None else None,
-                )
-            )
-
         raw_usage_attr = getattr(run_result, "usage", None)
         run_usage = raw_usage_attr() if callable(raw_usage_attr) else raw_usage_attr
         tokens_in = int(
@@ -354,9 +380,5 @@ class PydanticAIExtractionEngine:
             latency_ms=latency_ms,
             call_count=max(1, int(getattr(run_usage, "requests", 1))),
         )
-        return ExtractionBatchResult(
-            data=extracted_data,
-            evidence_by_field=evidence_by_field,
-            model_id=model_id,
-            usage=usage_record,
-        )
+        output = run_result.output if isinstance(run_result.output, dict) else {}
+        return output, usage_record

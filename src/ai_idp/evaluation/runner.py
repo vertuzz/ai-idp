@@ -379,6 +379,9 @@ async def _async_main() -> None:
     parser.add_argument("--profile", action="append", dest="profiles")
     parser.add_argument("--limit", type=int, default=4)
     parser.add_argument("--unbatched-questions", action="store_true")
+    parser.add_argument("--relevance-strategy", choices=["generative", "decisions"])
+    parser.add_argument("--relevance-batch-units", type=int)
+    parser.add_argument("--parallel-decision-batches", type=int)
     args = parser.parse_args()
     if not args.live:
         parser.error("Real model calls require --live and an explicit total budget.")
@@ -389,15 +392,22 @@ async def _async_main() -> None:
         limit=args.limit,
         allow_draft=args.allow_draft,
     )
+    overrides = {}
+    if args.unbatched_questions:
+        overrides["batch_relevance_questions"] = False
+    if args.relevance_strategy:
+        overrides["relevance_strategy"] = args.relevance_strategy
+    if args.relevance_batch_units is not None:
+        overrides["relevance_batch_units"] = args.relevance_batch_units
+    if args.parallel_decision_batches is not None:
+        overrides["max_parallel_decision_batches"] = args.parallel_decision_batches
     report = await run_evaluation_suite(
         build_container(),
         cases,
         profiles=args.profiles,
         allow_draft=args.allow_draft,
         max_total_cost_usd=args.max_total_cost_usd,
-        pipeline_overrides={"batch_relevance_questions": False}
-        if args.unbatched_questions
-        else None,
+        pipeline_overrides=overrides or None,
     )
     print(
         json.dumps(

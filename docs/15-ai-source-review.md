@@ -25,12 +25,26 @@ remain ignored local files. AI reviews record reviewer type, source checksum, ti
 notes. The manifest fingerprints the exact saved annotation bytes. AI review never sets the
 human `evaluation_ready`, rights or split-group adjudication flags.
 
-## Assessment boundary
+## Assessment boundary and results
 
 Corrected development references were frozen before the new development service runs. The pipeline,
 model prompts and selection thresholds were not tuned from protected annotations or outputs.
 Calibration/holdout material was used for annotation checking only. AI-reviewed development
 results are diagnostics; the runner keeps independent human benchmark requirements intact.
+
+A complete 72-case development assessment across all 668 fields comparing `default` (`decision_led`)
+and `always_vision` is compiled in `eval/results/ai-reviewed-development-assessment.json` and `.md`:
+- **`default` (`decision_led`)**: 88.02% exact and normalized accuracy (588/668), 97.90% field evidence match rate (654/668),
+  **100.0% routing evidence recall** (zero false negatives), 39.57% selection fraction (eliminating 60.4% of irrelevant pages),
+  68.47% selected unit precision (vs 27.09% in always_vision), 0 failures, 77 false-supported verifications,
+  and $0.6161 total estimated cost (~$0.0085/case) with p50 latency of 13.0s.
+- **`always_vision`**: 86.83% exact match accuracy (580/668), 87.28% normalized accuracy (583/668), 97.60% field evidence
+  match rate (652/668), 100.0% routing recall (inspecting 100% of all units), 0 failures, and $0.1724 total cost
+  with p50 latency of 5.0s.
+- **Per-Page Routing Scale**: In the 91-page PDF test (`gov-uk-pdf-disabled-facilities-grant-dfg-delivery-guidance-for-local-authorities-in-england-1`),
+  per-page parallel scoring (`pplx-decider-v1.2`, `relevance_batch_units=1`, 8 parallel batches, zero text duplication)
+  completed end-to-end in 102.9s for $0.0163, selecting exactly 15 pages with 100% evidence recall (6/6 expected units)
+  and 83.3% accuracy.
 
 Local review index: `eval/cache/ai-review/index.md`. Results and the assessment summary live
 under ignored `eval/results/`. Back up these files separately; source control does not contain

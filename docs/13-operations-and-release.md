@@ -60,6 +60,20 @@ before concrete item identities are assigned.
 
 ## Limits and recovery
 
+The default `RELEVANCE_STRATEGY=decisions` uses the configured decision model
+(`perplexity/pplx-decider-v1.2`) for probability-based classification.
+`RELEVANCE_STRATEGY=generative` asks `AI_IDP_RELEVANCE_MODEL` for a complete boolean/null
+unit/field matrix; uncertain units are retained and no probabilities are fabricated.
+Both strategies group up to `RELEVANCE_BATCH_UNITS=1` source units and
+`MAX_DECISION_QUESTIONS_PER_CALL=24` unit/field questions, subject to image and byte
+limits. `MAX_PARALLEL_DECISION_BATCHES=8` bounds concurrent relevance groups and
+selected-unit modality calls per job. Global/per-model capacity and pacing remain
+shared across processes. A job-wide physical-attempt budget is shared by all concurrent
+steps and retries, including attempts cancelled by a sibling failure or job timeout.
+Reported costs stop new attempts at the spend ceiling; already in-flight requests can
+still finish and incur charges. Provider usage may be unavailable for cancelled calls.
+Single-unit sequential comparisons use values of one for group size and parallelism.
+
 Incoming bodies are bounded before multipart parsing; file bytes are counted separately.
 Accepted documents are decoded in a subprocess, monitored for elapsed time and resident
 memory. The child is killed when a limit is observed; polling is not an OS-level memory

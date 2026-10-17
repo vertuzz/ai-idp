@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -185,6 +185,8 @@ class PipelineConfiguration(BaseModel):
     model_profile: str = "default"
     pipeline_mode: PipelineMode = PipelineMode.DECISION_LED
     decision_model: str = "perplexity/pplx-decider-v1.2"
+    relevance_model: str = "anthropic/claude-haiku-5.5"
+    relevance_strategy: Literal["generative", "decisions"] = "decisions"
     extraction_model: str = "anthropic/claude-haiku-5.5"
     escalation_model: str = "google/gemini-4-argon"
     relevance_threshold: float = 0.35
@@ -194,7 +196,10 @@ class PipelineConfiguration(BaseModel):
     max_coverage_reviews: int = 1
     max_job_estimated_cost_usd: float = 10.0
     batch_relevance_questions: bool = True
-    pipeline_version: str = "v2"
+    relevance_batch_units: int = Field(default=1, ge=1, le=64)
+    max_decision_questions_per_call: int = Field(default=24, ge=1, le=256)
+    max_parallel_decision_batches: int = Field(default=8, ge=1, le=32)
+    pipeline_version: str = "v3"
     max_job_seconds: float = 600
     max_model_calls: int = 250
     max_model_input_bytes: int = 20 * 1024 * 1024

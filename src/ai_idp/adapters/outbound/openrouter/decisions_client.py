@@ -13,6 +13,7 @@ import httpx
 from ai_idp.adapters.outbound.openrouter.pricing import estimate_cost_usd
 from ai_idp.application.ports.protocols import (
     ModalityResult,
+    RelevanceBatchResult,
     RelevanceResult,
     UnitInputPayload,
     VerificationBatchResult,
@@ -253,6 +254,73 @@ class OpenRouterDecisionEngine:
             estimated_cost_usd=cost,
             latency_ms=latency_ms,
         )
+
+    async def score_relevance_batch(
+        self,
+        job_id: str,
+        unit_payloads: list[UnitInputPayload],
+        fields: list[TargetFieldSpec],
+        instructions: str,
+        model_id: str,
+    ) -> RelevanceBatchResult:
+        """Evaluate named unit/field pairs against one shared multimodal state."""
+        state: list[Any] = [
+            "Evaluate each question only for its named candidate unit. Other units are "
+            "context, not evidence that the candidate itself contains the requested value. "
+            "Images following a unit header belong to that unit, until the next unit header."
+        ]
+        if instructions:
+            state.append(f"Extraction Instructions: {instructions}")
+        contexts = dict.fromkeys(p.document_context for p in unit_payloads if p.document_context)
+        state.extend(f"Full document context:\n{context}" for context in contexts)
+        questions: dict[str, Any] = {}
+        mapping = {}
+        for pi, payload in enumerate(unit_payloads):
+            state.extend(
+                _build_unit_state(payload, include_context=not bool(payload.document_context))
+            )
+            uid = payload.unit.unit_id
+            for fi, target in enumerate(fields):
+                key = f"unit_{pi}_field_{fi}"
+                mapping[key] = (uid, target)
+                questions[key] = {
+                    "type": "noul",
+                    "instructions": (
+                        f"Consider ONLY candidate unit {json.dumps(uid)} "
+                        f"at locator {json.dumps(payload.unit.source_locator)}. "
+                        f"Can this unit directly provide or materially clarify the value of "
+                        f"field {json.dumps(target.name)} ({target.description})? "
+                        f"Field schema: {json.dumps(target.raw_schema)}. "
+                        "Use the other units only to interpret this candidate unit."
+                    ),
+                    "criteria": {
+                        "false": f"Unit {uid} does not contain or clarify this field's value.",
+                        "true": f"Unit {uid} directly states or visually shows this value.",
+                    },
+                }
+        response, latency = await self._post_decisions(model_id, state, questions)
+        usage = self._build_usage_record(job_id, "scoring_relevance", model_id, response, latency)
+        results = {p.unit.unit_id: RelevanceResult(unit_id=p.unit.unit_id) for p in unit_payloads}
+        for key, (uid, target) in mapping.items():
+            probability, distribution = _parse_noul_answer(response["answers"].get(key))
+            result = results[uid]
+            result.field_scores[target.path] = probability
+            result.raw_distributions[target.path] = distribution
+            result.decision_records.append(
+                DecisionRecord(
+                    decision_id=f"dec_{uuid.uuid4().hex[:12]}",
+                    job_id=job_id,
+                    unit_id=uid,
+                    field_path=target.path,
+                    kind=DecisionKind.RELEVANCE,
+                    model_id=usage.model_id,
+                    version="v3",
+                    scores=distribution,
+                    selected=probability >= 0.5,
+                    latency_ms=latency,
+                )
+            )
+        return RelevanceBatchResult(results=results, usage=usage)
 
     async def score_relevance(
         self,
