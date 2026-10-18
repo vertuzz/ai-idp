@@ -50,8 +50,20 @@ def extract_units_and_currency(text: str) -> str | None:
 def is_ambiguous_numeric_notation(text: str) -> bool:
     """Detect if a number string could be ambiguously European vs US format (e.g. '1,234')."""
     cleaned = text.strip()
-    # e.g., '1,234' has exactly 3 digits after a single comma and no decimal dot
-    if re.fullmatch(r"^\d+,\d{3}$", cleaned):
+    # Exactly 3 digits after a single comma or dot, e.g. '1,234' or '1.234'
+    if re.search(r"(?:^|[^\d.,])[-+]?\d+[.,]\d{3}(?:[^\d.,]|$)", cleaned):
+        return True
+    return False
+
+
+def is_unsupported_numeric_notation(text: str) -> bool:
+    """Detect unsupported or non-standard numeric notations (fractions, hex, exponents, etc.)."""
+    cleaned = text.strip()
+    if re.search(r"\b\d+/\d+\b", cleaned):
+        return True
+    if re.search(r"\b0[xXbB][0-9a-fA-F]+\b", cleaned):
+        return True
+    if re.search(r"\d+\s*[\^|\*\*]\s*\d+", cleaned):
         return True
     return False
 
@@ -81,6 +93,41 @@ def _build_token_pattern(target: str) -> str:
             post_boundary = r"(?!(?:[.,]\d|\d))"
         return pre_boundary + re.escape(target) + post_boundary
     return r"(?<!\w)" + re.escape(target) + r"(?!\w)"
+
+
+build_token_pattern = _build_token_pattern
+
+
+def _check_span_token_boundaries(native_text: str, start: int, end: int, token: str) -> bool:
+    """Verify that a span in native_text adheres to token boundaries for numbers or words."""
+    is_numeric = bool(re.fullmatch(r"[-+]?\d+(?:[.,\s]\d+)*", token))
+    if is_numeric:
+        # Preceding boundary: cannot be preceded by digits, decimal/thousand separators, or sign
+        if start > 0:
+            char_before = native_text[start - 1]
+            if char_before in "0123456789.,+-":
+                return False
+        # Succeeding boundary
+        if end < len(native_text):
+            after = native_text[end:]
+            if re.search(r"[.,]\d+$", token):
+                if after and after[0].isdigit():
+                    return False
+            else:
+                if re.match(r"^(?:[.,]\d|\d)", after):
+                    return False
+        return True
+    else:
+        # General word boundary: cannot be preceded or succeeded by word characters
+        if start > 0:
+            char_before = native_text[start - 1]
+            if char_before.isalnum() or char_before == "_":
+                return False
+        if end < len(native_text):
+            char_after = native_text[end]
+            if char_after.isalnum() or char_after == "_":
+                return False
+        return True
 
 
 def validate_source_anchoring(
@@ -156,6 +203,36 @@ def validate_source_anchoring(
 
         sliced = native_text[span.start : span.end]
         if target_text is not None:
+            if sliced != target_text and _normalize_whitespace(sliced) != _normalize_whitespace(
+                target_text
+            ):
+                return CheckResult(
+                    check_name="source_anchoring",
+                    outcome=CheckOutcome.FAIL,
+                    reason_code="SPAN_TEXT_MISMATCH",
+                    message=(
+                        f"Text at span [{span.start}:{span.end}] '{sliced}' "
+                        f"does not match expected '{target_text}'."
+                    ),
+                    policy_version=policy_version,
+                    evidence_references=[evidence.unit_id],
+                )
+
+        clean_target = (target_text or sliced).strip()
+        if not _check_span_token_boundaries(native_text, span.start, span.end, clean_target):
+            return CheckResult(
+                check_name="source_anchoring",
+                outcome=CheckOutcome.FAIL,
+                reason_code="SPAN_BOUNDARY_VIOLATION",
+                message=(
+                    f"Text span [{span.start}:{span.end}] '{sliced}' violates token boundaries "
+                    f"in source unit text."
+                ),
+                policy_version=policy_version,
+                evidence_references=[evidence.unit_id],
+            )
+
+        if target_text is not None:
             if sliced == target_text:
                 return CheckResult(
                     check_name="source_anchoring",
@@ -165,23 +242,11 @@ def validate_source_anchoring(
                     policy_version=policy_version,
                     evidence_references=[evidence.unit_id],
                 )
-            if _normalize_whitespace(sliced) == _normalize_whitespace(target_text):
-                return CheckResult(
-                    check_name="source_anchoring",
-                    outcome=CheckOutcome.PASS,
-                    reason_code="SPAN_NORMALIZED_MATCH",
-                    message="Normalized text slice matches cited value at specified span.",
-                    policy_version=policy_version,
-                    evidence_references=[evidence.unit_id],
-                )
             return CheckResult(
                 check_name="source_anchoring",
-                outcome=CheckOutcome.FAIL,
-                reason_code="SPAN_TEXT_MISMATCH",
-                message=(
-                    f"Text at span [{span.start}:{span.end}] '{sliced}' "
-                    f"does not match expected '{target_text}'."
-                ),
+                outcome=CheckOutcome.PASS,
+                reason_code="SPAN_NORMALIZED_MATCH",
+                message="Normalized text slice matches cited value at specified span.",
                 policy_version=policy_version,
                 evidence_references=[evidence.unit_id],
             )
@@ -279,15 +344,24 @@ def validate_source_anchoring(
 def _parse_candidate_numbers_from_text(raw_text: str) -> list[Decimal]:
     """Parse all numeric candidate values and magnitudes from a text string."""
     results: list[Decimal] = []
-    # Match numbers with optional magnitude word (million, billion, thousand)
+    # Match numbers with optional magnitude word (million, billion, thousand) or scientific notation
     pattern = (
-        r"[-+]?(?:\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
+        r"[-+]?\d+(?:\.\d+)?[eE][-+]?\d+"
+        r"|[-+]?(?:\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
         r"(?:\s*(?:million|billion|thousand))?"
     )
     for m in re.finditer(pattern, raw_text, flags=re.IGNORECASE):
         token = m.group(0).strip()
         if not token:
             continue
+
+        if re.fullmatch(r"[-+]?\d+(?:\.\d+)?[eE][-+]?\d+", token):
+            try:
+                results.append(Decimal(token))
+                continue
+            except (InvalidOperation, ValueError):
+                pass
+
         multiplier = Decimal("1")
         if re.search(r"\bmillion\b", token, re.IGNORECASE):
             multiplier = Decimal("1000000")
@@ -299,14 +373,40 @@ def _parse_candidate_numbers_from_text(raw_text: str) -> list[Decimal]:
         num_str = re.sub(r"\b(million|thousand|billion)\b", "", token, flags=re.IGNORECASE).strip()
         num_str = num_str.replace(" ", "")
 
-        # European format: e.g. '1.200,00' or '1200,00' or '1.200'
-        if re.search(r"\d+\.\d{3},\d+", num_str) or re.search(r"^\d+,\d{2}$", num_str):
+        # European format with decimals: e.g. '1.200,00' or '1200,00'
+        if re.search(r"\d+\.\d{3},\d+", num_str) or re.search(r"^\d+,\d{1,2}$", num_str):
             clean_str = num_str.replace(".", "").replace(",", ".")
-        elif re.search(r"^\d{1,3}(?:\.\d{3})+$", num_str):
-            clean_str = num_str.replace(".", "")
-        else:
-            clean_str = num_str.replace(",", "")
+            try:
+                results.append(Decimal(clean_str) * multiplier)
+            except (InvalidOperation, ValueError):
+                pass
+            continue
 
+        # Ambiguous single separator with 3 digits: e.g. '1.234' or '1,234'
+        if re.fullmatch(r"[-+]?\d{1,3}[.,]\d{3}$", num_str):
+            try:
+                dec_val = Decimal(num_str.replace(",", ".")) * multiplier
+                results.append(dec_val)
+            except (InvalidOperation, ValueError):
+                pass
+            try:
+                th_val = Decimal(num_str.replace(".", "").replace(",", "")) * multiplier
+                results.append(th_val)
+            except (InvalidOperation, ValueError):
+                pass
+            continue
+
+        # Multiple European thousands: e.g. '1.234.567'
+        if re.fullmatch(r"[-+]?\d{1,3}(?:\.\d{3}){2,}$", num_str):
+            clean_str = num_str.replace(".", "")
+            try:
+                results.append(Decimal(clean_str) * multiplier)
+            except (InvalidOperation, ValueError):
+                pass
+            continue
+
+        # Standard US format (or plain integer / decimal)
+        clean_str = num_str.replace(",", "")
         try:
             val = Decimal(clean_str) * multiplier
             results.append(val)
@@ -427,6 +527,19 @@ def validate_typed_value(
                             outcome=CheckOutcome.PASS,
                             reason_code="NUMERIC_VALUE_EXACT",
                             message=f"Candidate number {cand_dec} matches source decimal.",
+                            policy_version=policy_version,
+                        )
+                    )
+                elif is_unsupported_numeric_notation(str(raw_text)):
+                    results.append(
+                        CheckResult(
+                            check_name="numeric_precision",
+                            outcome=CheckOutcome.INDETERMINATE,
+                            reason_code="UNSUPPORTED_NUMERIC_FORMAT",
+                            message=(
+                                f"Number string '{raw_text}' has unsupported format; "
+                                f"cannot mechanically verify candidate {cand_dec}."
+                            ),
                             policy_version=policy_version,
                         )
                     )

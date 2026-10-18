@@ -342,9 +342,13 @@ def score_extraction_result(
             summary.evidence_matches += 1
         if false_sup:
             summary.false_supported_count += 1
-        if comp_cat in ("representation_only_difference", "incomplete_or_extra_content"):
+        if comp_cat == "representation_only_difference" or (
+            comp_cat == "incomplete_or_extra_content" and sem_ok
+        ):
             summary.representation_differences += 1
-        elif comp_cat in ("wrong_value", "omission"):
+        elif comp_cat in ("wrong_value", "omission", "extra_field") or (
+            comp_cat == "incomplete_or_extra_content" and not sem_ok
+        ):
             summary.substantive_mismatches += 1
 
         summary.field_details.append(

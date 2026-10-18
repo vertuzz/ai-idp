@@ -1,8 +1,11 @@
+from typing import Any
+
 from ai_idp.application.ports.protocols import UnitInputPayload
 from ai_idp.application.services.pipeline import ExtractionPipelineService
 from ai_idp.domain.enums import (
     CheckOutcome,
     FieldStatus,
+    JobStatus,
     Modality,
     UnitKind,
     VerificationStatus,
@@ -11,6 +14,7 @@ from ai_idp.domain.models import (
     CheckResult,
     DocumentUnit,
     Evidence,
+    ExtractionResult,
     ExtractionSpecification,
     FieldValue,
     PipelineConfiguration,
@@ -596,3 +600,216 @@ async def test_23_escalation_targets_cited_problematic_units_on_first_attempt():
     # First attempt must target page_3 ONLY, not all 3 pages
     assert len(extracted_units_passed) == 1
     assert extracted_units_passed[0] == ["page_3"]
+
+
+def test_24_token_boundary_in_span_normalization_and_verification():
+    """24. [P1] Auto-anchoring and coordinate validation checks number boundaries."""
+    u1 = _make_unit("page_1", modalities=[Modality.TEXT])
+    payload_1000 = UnitInputPayload(unit=u1, native_text="Total: 1000 USD")
+    payload_neg = UnitInputPayload(unit=u1, native_text="Balance: -100 USD")
+    payload_frac = UnitInputPayload(unit=u1, native_text="Price: 100.50 USD")
+
+    ev_100 = Evidence(unit_id="page_1", quote="100")
+
+    # 1. Normalization must NOT auto-generate coordinates pointing inside 1000, -100, or 100.50
+    for p in (payload_1000, payload_neg, payload_frac):
+        norm = ExtractionPipelineService._normalize_evidences(
+            [ev_100],
+            unit_by_id={"page_1": u1},
+            default_unit_ids=["page_1"],
+            payload_by_id={"page_1": p},
+        )
+        assert len(norm) == 1
+        assert norm[0].text_span is None
+
+    # 2. When coordinates point inside 1000, validation must FAIL with SPAN_BOUNDARY_VIOLATION
+    span_inside_1000 = TextSpan(start=7, end=10, text="100")
+    ev_with_span = Evidence(unit_id="page_1", quote="100", text_span=span_inside_1000)
+    res_1000 = validate_source_anchoring(
+        unit=u1,
+        native_text="Total: 1000 USD",
+        evidence=ev_with_span,
+        raw_or_quote="100",
+    )
+    assert res_1000.outcome == CheckOutcome.FAIL
+    assert res_1000.reason_code == "SPAN_BOUNDARY_VIOLATION"
+
+    # Coordinates pointing inside -100 must also fail
+    span_inside_neg = TextSpan(start=10, end=13, text="100")
+    ev_with_neg_span = Evidence(unit_id="page_1", quote="100", text_span=span_inside_neg)
+    res_neg = validate_source_anchoring(
+        unit=u1,
+        native_text="Balance: -100 USD",
+        evidence=ev_with_neg_span,
+        raw_or_quote="100",
+    )
+    assert res_neg.outcome == CheckOutcome.FAIL
+    assert res_neg.reason_code == "SPAN_BOUNDARY_VIOLATION"
+
+
+def test_25_multiple_sources_different_pages_and_quotes_full_path():
+    """25. [P1] Two legitimate citations (e.g. '1,200' on page 1 and '1200' on page 2)
+    both pass source anchoring in full pipeline mechanical check."""
+    u1 = _make_unit("page_1", modalities=[Modality.TEXT])
+    u2 = _make_unit("page_2", modalities=[Modality.TEXT])
+
+    payloads = {
+        "page_1": UnitInputPayload(unit=u1, native_text="Summary Total: 1,200 USD"),
+        "page_2": UnitInputPayload(unit=u2, native_text="Itemized Subtotal: 1200 USD"),
+    }
+
+    ev1 = Evidence(unit_id="page_1", quote="1,200", raw_value="1,200")
+    ev2 = Evidence(unit_id="page_2", quote="1200", raw_value="1200")
+
+    fv = FieldValue(
+        path="/total",
+        value=1200,
+        raw_value="1,200",
+        status=FieldStatus.UNVERIFIED,
+        sources=[ev1, ev2],
+    )
+    spec_field = TargetFieldSpec(path="/total", name="total", field_type="integer")
+
+    ExtractionPipelineService._run_mechanical_checks(fv, spec_field, payloads)
+
+    anchor_checks = [c for c in fv.check_results if c.check_name == "source_anchoring"]
+    assert len(anchor_checks) == 2
+    assert all(c.outcome == CheckOutcome.PASS for c in anchor_checks)
+
+
+def test_26_ambiguous_and_scientific_number_handling():
+    """26. [P1] Ambiguous numbers (1.234) and scientific notation (1e3) accept valid formats,
+    and unsupported notations (3/4) return INDETERMINATE without hard FAIL."""
+    spec_num = TargetFieldSpec(path="/val", name="val", field_type="number")
+    spec_int = TargetFieldSpec(path="/val", name="val", field_type="integer")
+
+    # 1. Decimal 1.234 matches candidate Decimal('1.234')
+    res_dec = validate_typed_value(value=1.234, raw_text="1.234", field_spec=spec_num)
+    assert any(
+        c.outcome == CheckOutcome.PASS and c.reason_code == "NUMERIC_VALUE_EXACT" for c in res_dec
+    )
+    assert not any(c.outcome == CheckOutcome.FAIL for c in res_dec)
+
+    # 2. Decimal 1.234 under European thousands matches candidate 1234
+    res_th = validate_typed_value(value=1234, raw_text="1.234", field_spec=spec_int)
+    assert any(
+        c.outcome == CheckOutcome.PASS and c.reason_code == "NUMERIC_VALUE_EXACT" for c in res_th
+    )
+    assert not any(c.outcome == CheckOutcome.FAIL for c in res_th)
+
+    # 3. Scientific notation 1e3 matches candidate 1000
+    res_sci = validate_typed_value(value=1000, raw_text="1e3", field_spec=spec_int)
+    assert any(
+        c.outcome == CheckOutcome.PASS and c.reason_code == "NUMERIC_VALUE_EXACT" for c in res_sci
+    )
+    assert not any(c.outcome == CheckOutcome.FAIL for c in res_sci)
+
+    # 4. Unsupported format like fraction 3/4 returns INDETERMINATE, not hard FAIL
+    res_frac = validate_typed_value(value=0.75, raw_text="3/4", field_spec=spec_num)
+    assert any(
+        c.outcome == CheckOutcome.INDETERMINATE and c.reason_code == "UNSUPPORTED_NUMERIC_FORMAT"
+        for c in res_frac
+    )
+    assert not any(c.outcome == CheckOutcome.FAIL for c in res_frac)
+
+
+def test_27_qualifiers_and_units_reset_between_attempts():
+    """27. [P2] Qualifiers and unit are freshly recomputed per attempt;
+    replacing 'around $100' with 'EUR 90' clears approximate and USD."""
+    u1 = _make_unit("page_1", modalities=[Modality.TEXT])
+    payloads = {
+        "page_1": UnitInputPayload(
+            unit=u1, native_text="Price was around $100 but adjusted to EUR 90"
+        ),
+    }
+    spec_field = TargetFieldSpec(path="/price", name="price", field_type="number")
+
+    # Attempt 1: 'around $100'
+    ev1 = Evidence(unit_id="page_1", quote="around $100")
+    fv = FieldValue(
+        path="/price",
+        value=100,
+        raw_value="around $100",
+        status=FieldStatus.UNVERIFIED,
+        sources=[ev1],
+    )
+    ExtractionPipelineService._run_mechanical_checks(fv, spec_field, payloads)
+    assert "approximate" in fv.qualifiers
+    assert fv.unit == "USD"
+
+    # Attempt 2: corrected to 'EUR 90'
+    ev2 = Evidence(unit_id="page_1", quote="EUR 90")
+    fv.value = 90
+    fv.raw_value = "EUR 90"
+    fv.sources = [ev2]
+    ExtractionPipelineService._run_mechanical_checks(fv, spec_field, payloads)
+    assert fv.qualifiers == []
+    assert fv.unit == "EUR"
+
+
+def test_28_metrics_incomplete_extra_content_substantive_mismatch():
+    """28. [P2] Incomplete or extra content with non-boilerplate words (missing year or name)
+    is counted under substantive_mismatches, not representation_differences."""
+    from ai_idp.evaluation.metrics import score_extraction_result
+
+    def make_res(data_dict: dict[str, Any]) -> ExtractionResult:
+        field_vals = {
+            f"/{k}": FieldValue(
+                path=f"/{k}",
+                value=v,
+                status=FieldStatus.VERIFIED,
+                verification=VerificationStatus.SUPPORTED,
+            )
+            for k, v in data_dict.items()
+        }
+        return ExtractionResult(
+            job_id="job_1",
+            document_id="doc_1",
+            spec_id="spec_1",
+            status=JobStatus.COMPLETED,
+            schema_valid=True,
+            data=data_dict,
+            fields=field_vals,
+        )
+
+    # Case A: Missing year ("Report" extracted vs "Report 2024" expected)
+    res_a = make_res({"title": "Report"})
+    summary_a = score_extraction_result(
+        case_id="case_a",
+        source="test",
+        doc_format="pdf",
+        split="test",
+        model_profile="test",
+        result=res_a,
+        expected_fields=[{"path": "/title", "value": "Report 2024"}],
+    )
+    assert summary_a.substantive_mismatches == 1
+    assert summary_a.representation_differences == 0
+
+    # Case B: Missing model name ("iPhone 16" extracted vs "iPhone 16 Pro" expected)
+    res_b = make_res({"title": "iPhone 16"})
+    summary_b = score_extraction_result(
+        case_id="case_b",
+        source="test",
+        doc_format="pdf",
+        split="test",
+        model_profile="test",
+        result=res_b,
+        expected_fields=[{"path": "/title", "value": "iPhone 16 Pro"}],
+    )
+    assert summary_b.substantive_mismatches == 1
+    assert summary_b.representation_differences == 0
+
+    # Case C: Genuine boilerplate difference ("3" vs "Volume 3") remains representation difference
+    res_c = make_res({"title": "3"})
+    summary_c = score_extraction_result(
+        case_id="case_c",
+        source="test",
+        doc_format="pdf",
+        split="test",
+        model_profile="test",
+        result=res_c,
+        expected_fields=[{"path": "/title", "value": "Volume 3"}],
+    )
+    assert summary_c.representation_differences == 1
+    assert summary_c.substantive_mismatches == 0

@@ -75,6 +75,7 @@ from ai_idp.domain.models import (
 from ai_idp.domain.partial_data import project_partial_data
 from ai_idp.domain.schema_normalizer import validate_data_against_schema
 from ai_idp.domain.validation import (
+    build_token_pattern,
     extract_qualifiers,
     extract_units_and_currency,
     validate_field_association,
@@ -1357,12 +1358,14 @@ class ExtractionPipelineService:
         payload_by_id: dict[str, UnitInputPayload],
     ) -> None:
         fv.check_results = []
+        fv.qualifiers = []
+        fv.unit = None
         if fv.sources:
             for ev in fv.sources:
                 payload = payload_by_id.get(ev.unit_id)
                 unit = payload.unit if payload else None
                 native_text = payload.native_text if payload else None
-                quote_text = fv.raw_value or ev.quote
+                quote_text = ev.raw_value or ev.quote or fv.raw_value
                 res = validate_source_anchoring(
                     unit=unit,
                     native_text=native_text,
@@ -1380,15 +1383,28 @@ class ExtractionPipelineService:
                 )
             )
 
-        primary_text = fv.raw_value or (fv.sources[0].quote if fv.sources else None)
-        if primary_text:
-            quals = extract_qualifiers(primary_text)
-            if quals:
-                fv.qualifiers = list(dict.fromkeys(fv.qualifiers + quals))
-            unit_str = extract_units_and_currency(primary_text)
-            if unit_str and not fv.unit:
-                fv.unit = unit_str
+        all_texts: list[str] = []
+        if fv.sources:
+            for s in fv.sources:
+                t = s.raw_value or s.quote
+                if t and t not in all_texts:
+                    all_texts.append(t)
+        if fv.raw_value and fv.raw_value not in all_texts:
+            all_texts.append(fv.raw_value)
 
+        new_quals: list[str] = []
+        new_unit: str | None = None
+        for txt in all_texts:
+            q = extract_qualifiers(txt)
+            if q:
+                new_quals.extend(q)
+            u = extract_units_and_currency(txt)
+            if u and not new_unit:
+                new_unit = u
+        fv.qualifiers = list(dict.fromkeys(new_quals))
+        fv.unit = new_unit
+
+        primary_text = all_texts[0] if all_texts else None
         typed_checks = validate_typed_value(
             value=fv.value,
             raw_text=primary_text,
@@ -1452,7 +1468,8 @@ class ExtractionPipelineService:
                 native_text = payload_by_id[uid].native_text
                 if native_text:
                     clean = target_str.strip()
-                    matches = [m.span() for m in re.finditer(re.escape(clean), native_text)]
+                    pattern = build_token_pattern(clean)
+                    matches = [m.span() for m in re.finditer(pattern, native_text)]
                     if len(matches) == 1:
                         h = hashlib.sha256(native_text.encode("utf-8")).hexdigest()
                         span = TextSpan(
