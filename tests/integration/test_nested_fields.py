@@ -13,8 +13,8 @@ from tests.integration.test_pipeline_recovery import setup
 class NestedExtractor:
     async def extract_fields(self, **kw):
         values = {
-            "customer": {"name": "Example", "tax_id": None},
-            "items": [{"price": 12}, {"price": 15}],
+            "customer": {"name": "Service allocation", "tax_id": None},
+            "items": [{"price": 1000}, {"price": 200}],
         }
         data = {f.name: values.get(f.name, "RECOVERED") for f in kw["target_fields"]}
         return ExtractionBatchResult(
@@ -22,10 +22,10 @@ class NestedExtractor:
             evidence_by_field={
                 path: [Evidence(unit_id=kw["unit_inputs"][0][0].unit.unit_id, quote=str(value))]
                 for path, value in (
-                    ("/customer/name", "Example"),
+                    ("/customer/name", "Service allocation"),
                     ("/customer/tax_id", None),
-                    ("/items/0/price", 12),
-                    ("/items/1/price", 15),
+                    ("/items/0/price", 1000),
+                    ("/items/1/price", 200),
                     ("/items", values["items"]),
                     ("/customer", values["customer"]),
                 )
@@ -65,8 +65,8 @@ async def test_nested_leaf_diagnostics_persist_and_http_attempts_are_visible(tmp
         },
     )
     result = await c.pipeline_service.execute_job(job.job_id)
-    assert result.data["items"][1]["price"] == 15
-    assert result.fields["/items/1/price"].sources[0].quote == "15"
+    assert result.data["items"][1]["price"] == 200
+    assert result.fields["/items/1/price"].sources[0].quote == "200"
     assert result.fields["/items/0/price"].verification == VerificationStatus.SUPPORTED
     assert "/customer/tax_id" in result.unresolved_fields
     assert not result.schema_valid

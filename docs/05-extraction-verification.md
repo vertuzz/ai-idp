@@ -69,11 +69,29 @@ Two layers:
 
 For a required field that cannot be verified, either expose a documented partial-result state with internal null or return a schema-validity error/partial result. Do not fabricate a schema-compliant non-null value.
 
+## Mechanical validation and evidence anchoring
+
+Before and during independent verification, candidate values undergo deterministic mechanical checks (`src/ai_idp/domain/validation.py`):
+
+1. **Source Anchoring:** locates cited evidence quotes/spans directly within the cited unit's native text.
+   - Text span offsets (start, end, artifact SHA256) are validated if provided.
+   - Whole-token boundary matching avoids false substring containment (e.g. `100` inside `1000`).
+   - Scanned/vision-only units return `NOT_APPLICABLE` (native text absent; model vision verification handles them).
+   - Ambiguous multiple occurrences without span offsets return `INDETERMINATE`.
+   - Non-existent quotes or unknown units return `FAIL`.
+2. **Typed Value Checks:** validates numeric, date, identifier and currency representations.
+   - Exact decimal comparison (e.g. `1200` vs `1200.00`) and magnitude suffix handling (e.g. `1.9 million` = `1900000`).
+   - Leading zeroes on identifiers (e.g. `00123` must not lose leading zeroes).
+   - Flags ambiguous numeric notation (`1,234`) and date notation (`03/04/2025`) without explicit schema formats.
+3. **Field Association Checks:** flags concatenated multi-column text (e.g. table item descriptions merged with quantities or prices).
+
+**Mechanical Failure Invariant:** If any applicable mechanical check fails (`CheckOutcome.FAIL`), the model cannot override it. The field verification is demoted to `INSUFFICIENT_EVIDENCE`, the mechanical failure reason is recorded in `unresolved_reason`, and the field is escalated for re-extraction.
+
 ## Validation details and limitations
 
 - Validate data types and required properties independently from semantic truthfulness.
-- Deterministic arithmetic/string checks may be useful as **validation**, but the MVP does not use deterministic content heuristics to decide a parsing route.
+- Deterministic arithmetic/string checks serve as mechanical validation; they do not dictate model routing.
 - Extracting value and verifying it with related models can produce correlated errors. Independent prompts and source access help but are not guarantees.
 - For a field supported by multiple source units, verification must consider all relevant evidence.
-- Store the original and every replacement candidate with reason, chronology and cost.
+- Store the original and every replacement candidate with reason, chronology, check results and cost.
 - Never label raw decision-model probabilities as guaranteed confidence or a probability of no hallucination.

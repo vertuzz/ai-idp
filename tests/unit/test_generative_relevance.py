@@ -15,15 +15,16 @@ from ai_idp.domain.schema_normalizer import normalize_extraction_schema
 @pytest.mark.parametrize(
     "flags,valid",
     [
-        ({"/title": True, "/amount": False}, True),
-        ({"/title": None, "/amount": False}, True),
-        ({"/title": True}, False),
-        ({"/title": "true", "/amount": False}, False),
-        ({"/title": 1, "/amount": False}, False),
-        ({"page_1": {"/title": True, "/amount": False}}, False),
+        ({"page_1": True, "page_2": False}, True),
+        ({"page_1": None, "page_2": False}, True),
+        ({"page_1": True}, False),
+        ({"page_1": "true", "page_2": False}, False),
+        ({"page_1": 1, "page_2": False}, False),
+        ({"page_1": {"/title": True}, "page_2": False}, False),
+        ({"page_1": True, "page_2": False, "unknown": True}, False),
     ],
 )
-async def test_single_unit_flat_schema_validation_and_payload_handling(flags, valid):
+async def test_complete_unit_flags_preserve_all_fields_text_and_images(flags, valid):
     client = AsyncMock()
     usage = UsageRecord(usage_id="u", job_id="j", stage="scoring_relevance", model_id="m")
     client.run_structured.return_value = (flags, usage)
@@ -31,118 +32,45 @@ async def test_single_unit_flat_schema_validation_and_payload_handling(flags, va
     spec = normalize_extraction_schema(
         {
             "type": "object",
-            "properties": {"title": {"type": "string"}, "amount": {"type": "number"}},
+            "properties": {
+                f"target_{i}": {"type": "string", "description": f"DESCRIPTION_{i}_TAIL"}
+                for i in range(80)
+            },
         }
     )
-    payload = UnitInputPayload(
-        unit=DocumentUnit(unit_id="page_1", document_id="d", ordinal=1, kind=UnitKind.PDF_PAGE),
-        native_text="t" * 20000 + "TEXT_TAIL",
-        document_context="ctx" * 20000 + "CONTEXT_TAIL",
-        image_bytes=b"one",
-        additional_images=[(b"two", "image/png")],
-    )
+    payloads = [
+        UnitInputPayload(
+            unit=DocumentUnit(
+                unit_id=f"page_{i}", document_id="d", ordinal=i, kind=UnitKind.PDF_PAGE
+            ),
+            native_text="t" * 20000 + "TEXT_TAIL",
+            document_context="OUTSIDE_CONTEXT_TAIL",
+            prev_excerpt="OUTSIDE_NEIGHBOR",
+            image_bytes=b"one",
+            additional_images=[(b"two", "image/png")],
+        )
+        for i in (1, 2)
+    ]
     if not valid:
         with pytest.raises(ProviderError):
-            await engine.score_relevance_batch("j", [payload], spec.fields, "guidance", "m")
+            await engine.score_relevance_batch("j", payloads, spec.fields, "guidance", "m")
         return
-    result = await engine.score_relevance_batch("j", [payload], spec.fields, "guidance", "m")
+    result = await engine.score_relevance_batch("j", payloads, spec.fields, "guidance", "m")
     page = result.results["page_1"]
-    assert page.field_scores == {"/title": 1.0, "/amount": 0.0}
-    assert page.raw_distributions == {}
+    assert page.score == 1.0
+    assert result.results["page_2"].score == 0.0
+    assert page.raw_distribution == {}
     assert page.decision_records[0].scores == {}
-    assert page.decision_records[0].selected == {"relevant": flags["/title"], "retained": True}
-    parts = client.run_structured.call_args.kwargs["user_parts"]
-    assert str(parts).count("CONTEXT_TAIL") == 1
-    assert any(isinstance(p, str) and "TEXT_TAIL" in p for p in parts)
-    assert [p.data for p in parts if isinstance(p, BinaryContent)] == [b"one", b"two"]
+    assert page.decision_records[0].field_path is None
+    assert page.decision_records[0].selected == {"relevant": flags["page_1"], "retained": True}
+    sent = client.run_structured.call_args.kwargs
+    assert "DESCRIPTION_79_TAIL" in sent["system_instructions"]
+    parts = sent["user_parts"]
+    assert "OUTSIDE_CONTEXT_TAIL" not in str(parts) and "OUTSIDE_NEIGHBOR" not in str(parts)
+    assert str(parts).count("TEXT_TAIL") == 2
+    assert [p.data for p in parts if isinstance(p, BinaryContent)] == [b"one", b"two"] * 2
     assert result.usage is usage
-
-    schema = client.run_structured.call_args.kwargs["schema"]
-    assert set(schema["properties"].keys()) == {"/title", "/amount"}
-
-
-async def test_single_unit_without_document_context_uses_neighbor_excerpts():
-    client = AsyncMock()
-    usage = UsageRecord(usage_id="u", job_id="j", stage="scoring_relevance", model_id="m")
-    client.run_structured.return_value = ({"/title": True}, usage)
-    engine = GenerativeRelevanceEngine(client)
-    spec = normalize_extraction_schema(
-        {"type": "object", "properties": {"title": {"type": "string"}}}
-    )
-    payload = UnitInputPayload(
-        unit=DocumentUnit(unit_id="page_1", document_id="d", ordinal=1, kind=UnitKind.PDF_PAGE),
-        native_text="page 1 content",
-        prev_excerpt="prev page excerpt",
-        next_excerpt="next page excerpt",
-        document_context="",
-    )
-    result = await engine.score_relevance_batch("j", [payload], spec.fields, "guidance", "m")
-    assert result.results["page_1"].field_scores == {"/title": 1.0}
-    parts = client.run_structured.call_args.kwargs["user_parts"]
-    assert not any("Full document context:" in str(p) for p in parts)
-    assert any(
-        "Neighbor context only:\nprev page excerpt\nnext page excerpt" in str(p) for p in parts
-    )
-
-
-async def test_multi_unit_nested_matrix_schema():
-    client = AsyncMock()
-    usage = UsageRecord(usage_id="u", job_id="j", stage="scoring_relevance", model_id="m")
-    response_matrix = {
-        "page_1": {"/title": True, "/amount": False},
-        "page_2": {"/title": False, "/amount": True},
-    }
-    client.run_structured.return_value = (response_matrix, usage)
-    engine = GenerativeRelevanceEngine(client)
-    spec = normalize_extraction_schema(
-        {
-            "type": "object",
-            "properties": {"title": {"type": "string"}, "amount": {"type": "number"}},
-        }
-    )
-    payload_1 = UnitInputPayload(
-        unit=DocumentUnit(unit_id="page_1", document_id="d", ordinal=1, kind=UnitKind.PDF_PAGE),
-        native_text="page 1 text",
-    )
-    payload_2 = UnitInputPayload(
-        unit=DocumentUnit(unit_id="page_2", document_id="d", ordinal=2, kind=UnitKind.PDF_PAGE),
-        native_text="page 2 text",
-    )
-    result = await engine.score_relevance_batch(
-        "j", [payload_1, payload_2], spec.fields, "guidance", "m"
-    )
-    assert set(result.results.keys()) == {"page_1", "page_2"}
-    assert result.results["page_1"].field_scores == {"/title": 1.0, "/amount": 0.0}
-    assert result.results["page_2"].field_scores == {"/title": 0.0, "/amount": 1.0}
-
-    schema = client.run_structured.call_args.kwargs["schema"]
-    assert set(schema["properties"].keys()) == {"page_1", "page_2"}
-    assert set(schema["properties"]["page_1"]["properties"].keys()) == {"/title", "/amount"}
-
-
-async def test_multi_unit_rejects_missing_unit_or_flat_response():
-    client = AsyncMock()
-    usage = UsageRecord(usage_id="u", job_id="j", stage="scoring_relevance", model_id="m")
-    client.run_structured.return_value = ({"page_1": {"/title": True, "/amount": False}}, usage)
-    engine = GenerativeRelevanceEngine(client)
-    spec = normalize_extraction_schema(
-        {
-            "type": "object",
-            "properties": {"title": {"type": "string"}, "amount": {"type": "number"}},
-        }
-    )
-    payload_1 = UnitInputPayload(
-        unit=DocumentUnit(unit_id="page_1", document_id="d", ordinal=1, kind=UnitKind.PDF_PAGE),
-        native_text="page 1 text",
-    )
-    payload_2 = UnitInputPayload(
-        unit=DocumentUnit(unit_id="page_2", document_id="d", ordinal=2, kind=UnitKind.PDF_PAGE),
-        native_text="page 2 text",
-    )
-    with pytest.raises(ProviderError):
-        await engine.score_relevance_batch(
-            "j", [payload_1, payload_2], spec.fields, "guidance", "m"
-        )
+    assert set(sent["schema"]["properties"]) == {"page_1", "page_2"}
 
 
 def test_load_unit_payloads_leaves_document_context_empty():

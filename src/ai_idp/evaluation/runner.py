@@ -378,7 +378,11 @@ async def _async_main() -> None:
     parser.add_argument("--source", action="append", dest="sources")
     parser.add_argument("--profile", action="append", dest="profiles")
     parser.add_argument("--limit", type=int, default=4)
-    parser.add_argument("--unbatched-questions", action="store_true")
+    parser.add_argument(
+        "--unbatched-questions",
+        action="store_true",
+        help="One unit question per relevance request, still including every target field",
+    )
     parser.add_argument("--relevance-strategy", choices=["generative", "decisions"])
     parser.add_argument("--relevance-batch-units", type=int)
     parser.add_argument("--parallel-decision-batches", type=int)

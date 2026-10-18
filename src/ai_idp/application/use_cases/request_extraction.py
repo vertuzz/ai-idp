@@ -51,7 +51,7 @@ def build_pipeline_config(
         max_prepared_input_bytes=settings.max_prepared_input_mib * 1024 * 1024,
         model_parameters={"temperature": 0.0, "max_output_tokens": settings.max_output_tokens},
         prompt_versions={
-            "relevance": "v3",
+            "relevance": "v4-page",
             "modality": "v2",
             "extraction": "v2",
             "verification": "v2",

@@ -9,7 +9,7 @@ from ai_idp.application.services.request_budget import (
     RequestBudget,
     active_request_budget,
 )
-from ai_idp.domain.errors import BudgetExhaustedError, ProviderError
+from ai_idp.domain.errors import BudgetExhaustedError, DomainError, ProviderError
 from tests.integration.test_api_and_worker import FakeDecisionEngine
 from tests.integration.test_pipeline_recovery import make_available, setup
 
@@ -43,9 +43,9 @@ class TrackingDecisionEngine(FakeDecisionEngine):
             self.active -= 1
 
 
-def multipage_job(c, *, fields=3):
+def multipage_job(c, *, fields=3, pages=9):
     pdf = pymupdf.open()
-    for number in range(9):
+    for number in range(pages):
         pdf.new_page().insert_text((50, 50), f"Synthetic page {number + 1}")
     raw = pdf.tobytes()
     pdf.close()
@@ -53,11 +53,12 @@ def multipage_job(c, *, fields=3):
     schema = {
         "type": "object",
         "properties": {f"value_{i}": {"type": "string"} for i in range(fields)},
+        "required": [f"value_{i}" for i in range(fields // 2)],
     }
     return c.request_extraction_use_case.execute(document_id=doc.document_id, schema_json=schema)
 
 
-async def test_page_and_field_batches_are_bounded_parallel_and_resume_without_repayment(tmp_path):
+async def test_page_batches_include_every_field_and_resume_without_repayment(tmp_path):
     from unittest.mock import patch
 
     decision = TrackingDecisionEngine()
@@ -76,18 +77,57 @@ async def test_page_and_field_batches_are_bounded_parallel_and_resume_without_re
             await c.pipeline_service.execute_job(job.job_id)
     assert decision.peak == 2
     assert decision.active == 0
-    assert all(
-        len(units) <= 2 and len(units) * len(fields) <= 3 for units, fields in decision.calls
-    )
+    assert len(decision.calls) == 5
+    assert all(len(units) <= 2 and len(fields) == 3 for units, fields in decision.calls)
     pairs = [(uid, field) for units, fields in decision.calls for uid in units for field in fields]
     assert len(pairs) == len(set(pairs)) == 27
     selection = c.result_repo.load_step(job.job_id, "routing:selection")
+    assert selection["scope"] == "any_requested_field"
+    assert len(selection["unit_scores"]) == 9
+    assert "field_unit_scores" not in selection
     assert selection["selected_unit_ids"] == ["page_000001", "page_000002"]
     assert c.job_repo.get_job(job.job_id).progress.units_scored == 9
     paid_batches = len(decision.calls)
     make_available(c, job.job_id)
     await c.pipeline_service.execute_job(job.job_id)
     assert len(decision.calls) == paid_batches
+
+
+async def test_100_pages_and_80_fields_need_13_relevance_calls_with_eight_images(tmp_path):
+    decision = TrackingDecisionEngine()
+    c, _, _ = setup(
+        tmp_path,
+        decision=decision,
+        relevance_batch_units=8,
+        max_field_extra_attempts=0,
+        max_coverage_reviews=0,
+    )
+    job = multipage_job(c, fields=80, pages=100)
+    await c.pipeline_service.execute_job(job.job_id)
+    assert len(decision.calls) == 13
+    assert sorted(len(units) for units, _ in decision.calls) == [4] + [8] * 12
+    assert all(len(fields) == 80 for _, fields in decision.calls)
+    seen = [uid for units, _ in decision.calls for uid in units]
+    assert len(seen) == len(set(seen)) == 100
+    assert 1 < decision.peak <= 8
+    records = c.result_repo.list_decisions(job.job_id)
+    relevance = [d for d in records if d.kind.value == "relevance"]
+    assert len(relevance) == 100 and all(d.field_path is None for d in relevance)
+    assert c.job_repo.get_job(job.job_id).progress.units_scored == 100
+
+
+async def test_legacy_job_is_rejected_before_reusing_incompatible_checkpoints(tmp_path):
+    decision = TrackingDecisionEngine()
+    c, doc, _ = setup(tmp_path, decision=decision)
+    job = c.request_extraction_use_case.execute(
+        document_id=doc.document_id,
+        schema_json={"type": "object", "properties": {"value": {"type": "string"}}},
+        config_overrides={"pipeline_version": "v3"},
+    )
+    with pytest.raises(DomainError, match="older relevance contract"):
+        await c.pipeline_service.execute_job(job.job_id)
+    assert decision.calls == []
+    assert c.job_repo.get_job(job.job_id).status.value == "failed"
 
 
 async def test_concurrent_attempts_share_one_job_budget_and_cancel_siblings(tmp_path):

@@ -99,6 +99,56 @@ def evidence_matches(
     return False
 
 
+def classify_field_comparison(
+    extracted: Any,
+    expected: Any,
+) -> tuple[bool, bool, bool, str]:
+    """Classify comparison between extracted and expected values.
+
+    Returns (exact_match, normalized_match, semantic_match, category).
+    Categories:
+    - 'exact_match'
+    - 'representation_only_difference'
+    - 'incomplete_or_extra_content'
+    - 'wrong_value'
+    - 'omission'
+    - 'unknown'
+    """
+    exact, norm = values_match(extracted, expected)
+    if exact:
+        return True, True, True, "exact_match"
+    if extracted is None:
+        return False, False, False, "omission"
+    if expected is None:
+        return False, False, False, "extra_field"
+    if norm:
+        return False, True, True, "representation_only_difference"
+
+    if isinstance(extracted, str) and isinstance(expected, str):
+        # Check unicode punctuation equivalence (curly quotes, dashes, non-breaking hyphens)
+        def clean_punct(s: str) -> str:
+            s = s.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+            s = s.replace("‐", "-").replace("–", "-").replace("—", "-")
+            s = re.sub(r"[.,]$", "", s.strip())
+            return " ".join(s.split()).lower()
+
+        c_ext = clean_punct(extracted)
+        c_exp = clean_punct(expected)
+        if c_ext == c_exp:
+            return False, False, True, "representation_only_difference"
+
+        # Check prefix/suffix differences (e.g. 'Volume 3' vs '3', 'Jan. 16, 2018' vs 'Jan.16,2018')
+        if (
+            c_ext.endswith(c_exp)
+            or c_exp.endswith(c_ext)
+            or c_ext.startswith(c_exp)
+            or c_exp.startswith(c_ext)
+        ):
+            return False, False, True, "incomplete_or_extra_content"
+
+    return False, False, False, "wrong_value"
+
+
 @dataclass
 class FieldScoreDetail:
     path: str
@@ -109,6 +159,8 @@ class FieldScoreDetail:
     evidence_match: bool
     verification: str | None = None
     false_supported: bool = False
+    semantic_match: bool = False
+    comparison_category: str | None = None
 
 
 @dataclass
@@ -126,6 +178,9 @@ class CaseEvaluationSummary:
     normalized_matches: int = 0
     evidence_matches: int = 0
     false_supported_count: int = 0
+    semantic_matches: int = 0
+    representation_differences: int = 0
+    substantive_mismatches: int = 0
     llm_calls: int = 0
     estimated_cost_usd: float = 0.0
     latency_ms: int = 0
@@ -190,6 +245,8 @@ def score_extraction_result(
             found = True  # Explicit internal absence can omit an optional non-null property.
         exact_ok, norm_ok = values_match(extracted_val, expected_val)
         exact_ok, norm_ok = exact_ok and found, norm_ok and found
+        _, _, sem_ok, comp_cat = classify_field_comparison(extracted_val, expected_val)
+        sem_ok = sem_ok and found
 
         ext_sources = fv.sources if fv else []
         ver_status = fv.verification.value if (fv and fv.verification) else None
@@ -213,10 +270,16 @@ def score_extraction_result(
             summary.exact_matches += 1
         if norm_ok:
             summary.normalized_matches += 1
+        if sem_ok:
+            summary.semantic_matches += 1
         if ev_ok:
             summary.evidence_matches += 1
         if false_sup:
             summary.false_supported_count += 1
+        if comp_cat in ("representation_only_difference", "incomplete_or_extra_content"):
+            summary.representation_differences += 1
+        elif comp_cat in ("wrong_value", "omission"):
+            summary.substantive_mismatches += 1
 
         summary.field_details.append(
             FieldScoreDetail(
@@ -228,6 +291,8 @@ def score_extraction_result(
                 evidence_match=ev_ok,
                 verification=ver_status,
                 false_supported=false_sup,
+                semantic_match=sem_ok,
+                comparison_category=comp_cat,
             )
         )
 

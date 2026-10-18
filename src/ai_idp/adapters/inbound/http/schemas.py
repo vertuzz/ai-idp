@@ -88,27 +88,35 @@ class EvidenceItemResponse(BaseModel):
     locator: dict[str, Any]
     quote: str | None = None
     bounding_box: dict[str, Any] | None = None
+    text_span: dict[str, Any] | None = None
 
 
 class FieldAttemptResponse(BaseModel):
     attempt_number: int
     value: Any = None
+    raw_value: str | None = None
     sources: list[EvidenceItemResponse]
     model_id: str
     modality: str | None = None
     status: str
     error: str | None = None
+    check_results: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
 
 
 class FieldResultItemResponse(BaseModel):
     status: str
     verification: str | None = None
+    raw_value: str | None = None
+    normalization_method: str | None = None
+    qualifiers: list[str] = Field(default_factory=list)
+    unit: str | None = None
     raw_probabilities: dict[str, float] = Field(default_factory=dict)
     sources: list[EvidenceItemResponse] = Field(default_factory=list)
     attempt_count: int = 1
     unresolved_reason: str | None = None
     attempts: list[FieldAttemptResponse] = Field(default_factory=list)
+    check_results: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ExtractionResultResponse(BaseModel):

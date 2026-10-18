@@ -35,6 +35,7 @@ from ai_idp.domain.enums import (
 from ai_idp.domain.errors import DomainError, JobLeaseLostError, JobNotFoundError
 from ai_idp.domain.field_paths import assemble_fields
 from ai_idp.domain.models import (
+    CheckResult,
     DecisionRecord,
     Document,
     DocumentUnit,
@@ -583,8 +584,10 @@ class SqlAlchemyResultRepository:
             )
             candidate_payload = {
                 "value": attempt.value,
+                "raw_value": attempt.raw_value,
                 "sources": [s.model_dump(mode="json") for s in attempt.sources],
                 "modality": attempt.modality.value if attempt.modality else None,
+                "check_results": [c.model_dump(mode="json") for c in attempt.check_results],
             }
             if existing is None:
                 session.add(
@@ -641,6 +644,20 @@ class SqlAlchemyResultRepository:
             for f_path, fv in fields.items():
                 existing = session.get(FieldResultRow, (job_id, f_path))
                 sources_list = [s.model_dump(mode="json") for s in fv.sources]
+                score_dict = dict(fv.raw_probabilities)
+                if fv.check_results:
+                    score_dict["check_results"] = [
+                        c.model_dump(mode="json") for c in fv.check_results
+                    ]
+                if fv.raw_value is not None:
+                    score_dict["raw_value"] = fv.raw_value
+                if fv.normalization_method is not None:
+                    score_dict["normalization_method"] = fv.normalization_method
+                if fv.qualifiers:
+                    score_dict["qualifiers"] = list(fv.qualifiers)
+                if fv.unit is not None:
+                    score_dict["unit"] = fv.unit
+
                 if existing is None:
                     session.add(
                         FieldResultRow(
@@ -651,7 +668,7 @@ class SqlAlchemyResultRepository:
                             verification_status=(
                                 fv.verification.value if fv.verification else None
                             ),
-                            score_json=fv.raw_probabilities,
+                            score_json=score_dict,
                             sources_json=sources_list,
                             attempt_count=fv.attempt_count,
                             unresolved_reason=fv.unresolved_reason,
@@ -663,7 +680,7 @@ class SqlAlchemyResultRepository:
                     existing.verification_status = (
                         fv.verification.value if fv.verification else None
                     )
-                    existing.score_json = fv.raw_probabilities
+                    existing.score_json = score_dict
                     existing.sources_json = sources_list
                     existing.attempt_count = fv.attempt_count
                     existing.unresolved_reason = fv.unresolved_reason
@@ -695,16 +712,23 @@ class SqlAlchemyResultRepository:
                     for ev in (cand.get("sources") or [])
                     if isinstance(ev, dict)
                 ]
+                cand_checks = [
+                    CheckResult.model_validate(c)
+                    for c in (cand.get("check_results") or [])
+                    if isinstance(c, dict)
+                ]
                 attempts_by_path.setdefault(ar.field_path, []).append(
                     FieldCandidateAttempt(
                         field_path=ar.field_path,
                         attempt_number=ar.attempt_number,
                         value=cand.get("value"),
+                        raw_value=cand.get("raw_value"),
                         sources=evs,
                         model_id=ar.model_id,
                         modality=cand.get("modality"),
                         status=ar.status,
                         error=ar.error,
+                        check_results=cand_checks,
                         created_at=ar.created_at,
                     )
                 )
@@ -736,20 +760,35 @@ class SqlAlchemyResultRepository:
                     for ev in (r.sources_json or [])
                     if isinstance(ev, dict)
                 ]
+                score_dict = dict(r.score_json or {})
+                fv_checks = [
+                    CheckResult.model_validate(c)
+                    for c in (score_dict.get("check_results") or [])
+                    if isinstance(c, dict)
+                ]
+                raw_val = score_dict.get("raw_value")
+                norm_method = score_dict.get("normalization_method")
+                quals = [str(q) for q in (score_dict.get("qualifiers") or [])]
+                unit_str = score_dict.get("unit")
+                raw_probs = {
+                    str(k): float(v) for k, v in score_dict.items() if isinstance(v, (int, float))
+                }
+
                 fields_map[path] = FieldValue(
                     path=path,
                     value=r.final_value_json,
+                    raw_value=raw_val,
                     status=f_status,
                     verification=ver_status,
-                    raw_probabilities={
-                        str(k): float(v)
-                        for k, v in (r.score_json or {}).items()
-                        if isinstance(v, (int, float))
-                    },
+                    raw_probabilities=raw_probs,
                     sources=sources,
                     attempt_count=r.attempt_count,
                     unresolved_reason=r.unresolved_reason,
                     attempts=attempts_by_path.get(path, []),
+                    normalization_method=norm_method,
+                    qualifiers=quals,
+                    unit=unit_str,
+                    check_results=fv_checks,
                 )
                 if f_status == FieldStatus.UNRESOLVED:
                     unresolved_fields.append(path)

@@ -25,7 +25,7 @@ FastAPI adapter ----> IngestDocument / RequestExtraction / GetJob / GetResult
 - **Document:** immutable source identity, type, checksum, store reference.
 - **DocumentUnit:** stable unit ID; page/frame/semantic-block kind; ordered position; extracted native text; optional image; metadata and pointers to original content.
 - **ExtractionSpecification:** normalized user schema, field descriptions, instructions, schema fingerprint.
-- **CandidateUnit:** source unit + targeted fields + relevance output/probabilities.
+- **CandidateUnit:** source unit + relevance to any requested field + raw output/probabilities.
 - **ModalityDecision:** TEXT, VISION or TEXT_AND_VISION, evidence/rationale metadata, probabilities and policy version.
 - **FieldValue:** JSON path, value or null, source references, verification status, diagnostic score(s), attempts.
 - **Evidence:** source unit ID, quoted span or location, optional bounding box; support multiple sources per field.
@@ -63,8 +63,8 @@ The VerificationEngine may start as an application service orchestrating a Decis
 
 1. Ingest and prepare source units, storing durable references.
 2. Normalize field targets from ExtractionSpecification.
-3. Score all units for field-aware relevance, accounting for continuations and context.
-4. Build a field-to-candidate-unit map with uncertainty preservation.
+3. Score bounded groups of units against the complete field set, one score per unit.
+4. Select a shared candidate-unit set using a threshold and document-wide safety floor.
 5. Score modality per selected unit/field-group; prepare native text and/or page image.
 6. Group related field requests and source units into bounded extraction calls.
 7. Validate structured output shape and attach source evidence.

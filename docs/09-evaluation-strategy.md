@@ -27,7 +27,7 @@ Separate single-page layout/extraction measurements from truly multi-page releva
 
 1. **Always-vision baseline:** process all available source units as images, without relevance pruning.
 2. **Text-only baseline:** native extracted text when available, with explicit inability/partial results otherwise.
-3. **Decision-led pipeline:** field relevance → modality selection → structured extraction.
+3. **Decision-led pipeline:** schema-aware unit relevance → modality selection → structured extraction.
 4. **Verification ablation:** rerun decision-led extraction with and without field verification.
 5. **Full recovery:** verification, missing-field coverage review and bounded escalation.
 6. **Model experiments:** `perplexity/pplx-decider-v1.2` vs Flash/compatible alternatives; cheap primary extraction (`anthropic/claude-haiku-5.5`) vs stronger escalation (`google/gemini-4-argon`); single-question vs batched decisions.

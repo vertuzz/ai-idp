@@ -107,53 +107,55 @@ async def test_missing_verification_answer_fails_closed():
         await engine.verify_fields("j", [(spec.fields[0], "invented", [])], {}, "model")
 
 
-async def test_relevance_batch_maps_each_unit_field_and_shares_context_once():
+async def test_relevance_batch_scores_units_against_all_fields_without_pair_expansion():
     engine = OpenRouterDecisionEngine(api_key="unused")
     engine._post_decisions = AsyncMock(
-        return_value=(
-            {
-                "answers": {
-                    "unit_0_field_0": 0.9,
-                    "unit_0_field_1": 0.2,
-                    "unit_1_field_0": 0.1,
-                    "unit_1_field_1": 0.8,
-                }
-            },
-            7,
-        )
+        return_value=({"answers": {f"unit_{i}": 0.9 if i % 2 else 0.1 for i in range(8)}}, 7)
     )
     spec = normalize_extraction_schema(
         {
             "type": "object",
-            "properties": {"title": {"type": "string"}, "amount": {"type": "number"}},
+            "properties": {
+                f"target_{i}": {"type": "string", "description": f"DESCRIPTION_{i}_TAIL"}
+                for i in range(80)
+            },
+            "required": [f"target_{i}" for i in range(40)],
         }
     )
     payloads = [
         UnitInputPayload(
             unit=DocumentUnit(
-                unit_id=uid,
+                unit_id=f"page_{i}",
                 document_id="d",
-                ordinal=i,
+                ordinal=i + 1,
                 kind=UnitKind.PDF_PAGE,
-                source_locator={"page": i},
+                source_locator={"page_number": i + 1},
             ),
-            native_text="text " + uid,
-            image_bytes=uid.encode(),
-            document_context="SHARED_CONTEXT_TAIL",
+            native_text=f"page {i} text " + "x" * 20000 + "TEXT_TAIL",
+            image_bytes=f"image {i}".encode(),
+            document_context="OUTSIDE_BATCH_CONTEXT",
+            prev_excerpt="OUTSIDE_NEIGHBOR",
         )
-        for i, uid in enumerate(["first", "last"], start=1)
+        for i in range(8)
     ]
     result = await engine.score_relevance_batch("j", payloads, spec.fields, "guidance", "m")
-    assert result.results["first"].field_scores == {"/title": 0.9, "/amount": 0.2}
-    assert result.results["last"].field_scores == {"/title": 0.1, "/amount": 0.8}
     _, state, questions = engine._post_decisions.call_args.args
-    assert str(state).count("SHARED_CONTEXT_TAIL") == 1
-    assert len([p for p in state if isinstance(p, dict)]) == 2
-    assert '"last"' in questions["unit_1_field_0"]["instructions"]
-    assert all(r.usage is None for r in result.results.values())
+    assert len(questions) == 8  # Not 8 * 80 field questions.
+    assert len([part for part in state if isinstance(part, dict)]) == 8
+    assert "OUTSIDE_BATCH_CONTEXT" not in str(state) and "OUTSIDE_NEIGHBOR" not in str(state)
+    assert str(state).count("TEXT_TAIL") == 8
+    targets = json.loads(state[1].split("\n", 1)[1])
+    assert len(targets) == 80
+    assert sum(target["required"] for target in targets) == 40
+    assert targets[-1]["description"] == "DESCRIPTION_79_TAIL"
+    assert all("AT LEAST ONE" in q["instructions"] for q in questions.values())
+    assert '"page_7"' in questions["unit_7"]["instructions"]
+    assert [r.score for r in result.results.values()] == [0.1, 0.9] * 4
+    assert all(r.raw_distribution["true"] == r.score for r in result.results.values())
+    records = [d for r in result.results.values() for d in r.decision_records]
+    assert len(records) == 8 and all(d.field_path is None for d in records)
     assert result.usage.call_count == 1
-    assert sum(len(r.decision_records) for r in result.results.values()) == 4
-    engine._post_decisions.return_value = ({"answers": {"unit_0_field_0": 0.9}}, 7)
+    engine._post_decisions.return_value = ({"answers": {"unit_0": 0.9}}, 7)
     with pytest.raises(ProviderError):
         await engine.score_relevance_batch("j", payloads, spec.fields, "guidance", "m")
 

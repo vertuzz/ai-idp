@@ -118,7 +118,7 @@ class Settings(BaseSettings):
     )
     max_units_per_call: int = Field(default=12, ge=2, validation_alias="MAX_UNITS_PER_CALL")
     relevance_batch_units: int = Field(
-        default=1, ge=1, le=64, validation_alias="RELEVANCE_BATCH_UNITS"
+        default=8, ge=1, le=64, validation_alias="RELEVANCE_BATCH_UNITS"
     )
     max_decision_questions_per_call: int = Field(
         default=24, ge=1, le=256, validation_alias="MAX_DECISION_QUESTIONS_PER_CALL"

@@ -319,6 +319,10 @@ def create_app(
             f_path: FieldResultItemResponse(
                 status=fv.status.value,
                 verification=fv.verification.value if fv.verification else None,
+                raw_value=fv.raw_value,
+                normalization_method=fv.normalization_method,
+                qualifiers=list(fv.qualifiers),
+                unit=fv.unit,
                 raw_probabilities=fv.raw_probabilities,
                 sources=[
                     EvidenceItemResponse(
@@ -326,6 +330,7 @@ def create_app(
                         locator=ev.locator,
                         quote=ev.quote,
                         bounding_box=ev.bounding_box,
+                        text_span=ev.text_span.model_dump(mode="json") if ev.text_span else None,
                     )
                     for ev in fv.sources
                 ],
@@ -335,6 +340,7 @@ def create_app(
                     FieldAttemptResponse.model_validate(a.model_dump(mode="json"))
                     for a in fv.attempts
                 ],
+                check_results=[c.model_dump(mode="json") for c in fv.check_results],
             )
             for f_path, fv in result.fields.items()
         }

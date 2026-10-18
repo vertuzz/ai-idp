@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from ai_idp.domain.enums import (
+    CheckOutcome,
     DecisionKind,
     DocumentStatus,
     FieldStatus,
@@ -97,22 +98,43 @@ class ModalityDecision(BaseModel):
     capability_limitation: str | None = None
 
 
+class TextSpan(BaseModel):
+    start: int
+    end: int
+    text: str | None = None
+    artifact_ref: str | None = None
+    artifact_sha256: str | None = None
+
+
+class CheckResult(BaseModel):
+    check_name: str
+    outcome: CheckOutcome
+    reason_code: str
+    message: str | None = None
+    policy_version: str = "v1"
+    evidence_references: list[str] = Field(default_factory=list)
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 class Evidence(BaseModel):
     unit_id: str
     locator: dict[str, Any] = Field(default_factory=dict)
     quote: str | None = None
     bounding_box: dict[str, Any] | None = None
+    text_span: TextSpan | None = None
 
 
 class FieldCandidateAttempt(BaseModel):
     field_path: str
     attempt_number: int
     value: Any = None
+    raw_value: str | None = None
     sources: list[Evidence] = Field(default_factory=list)
     model_id: str
     modality: Modality | None = None
     status: str = "completed"
     error: str | None = None
+    check_results: list[CheckResult] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -127,6 +149,7 @@ class VerificationOutcome(BaseModel):
 class FieldValue(BaseModel):
     path: str
     value: Any = None
+    raw_value: str | None = None
     status: FieldStatus
     verification: VerificationStatus | None = None
     raw_probabilities: dict[str, float] = Field(default_factory=dict)
@@ -134,6 +157,10 @@ class FieldValue(BaseModel):
     attempt_count: int = 0
     unresolved_reason: str | None = None
     attempts: list[FieldCandidateAttempt] = Field(default_factory=list)
+    normalization_method: str | None = None
+    qualifiers: list[str] = Field(default_factory=list)
+    unit: str | None = None
+    check_results: list[CheckResult] = Field(default_factory=list)
 
 
 class DecisionRecord(BaseModel):
@@ -196,10 +223,10 @@ class PipelineConfiguration(BaseModel):
     max_coverage_reviews: int = 1
     max_job_estimated_cost_usd: float = 10.0
     batch_relevance_questions: bool = True
-    relevance_batch_units: int = Field(default=1, ge=1, le=64)
+    relevance_batch_units: int = Field(default=8, ge=1, le=64)
     max_decision_questions_per_call: int = Field(default=24, ge=1, le=256)
     max_parallel_decision_batches: int = Field(default=8, ge=1, le=32)
-    pipeline_version: str = "v3"
+    pipeline_version: str = "v4"
     max_job_seconds: float = 600
     max_model_calls: int = 250
     max_model_input_bytes: int = 20 * 1024 * 1024

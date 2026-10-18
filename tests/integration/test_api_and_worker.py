@@ -60,21 +60,19 @@ class FakeDecisionEngine:
         uid = unit_payload.unit.unit_id
         is_first = unit_payload.unit.ordinal == 1
         prob = 0.92 if is_first else 0.12
-        scores = {f.path: prob for f in fields}
-        dists = {f.path: {"true": prob, "false": round(1.0 - prob, 4)} for f in fields}
+        distribution = {"true": prob, "false": round(1.0 - prob, 4)}
         records = [
             DecisionRecord(
-                decision_id=f"dec_rel_{job_id}_{uid}_{f.path}",
+                decision_id=f"dec_rel_{job_id}_{uid}",
                 job_id=job_id,
                 unit_id=uid,
-                field_path=f.path,
+                field_path=None,
                 kind=DecisionKind.RELEVANCE,
                 model_id=model_id,
-                scores=dists[f.path],
+                scores=distribution,
                 selected=is_first,
                 latency_ms=15,
             )
-            for idx, f in enumerate(fields)
         ]
         usage = UsageRecord(
             usage_id=f"use_rel_{job_id}_{uid}",
@@ -88,8 +86,8 @@ class FakeDecisionEngine:
         )
         return RelevanceResult(
             unit_id=uid,
-            field_scores=scores,
-            raw_distributions=dists,
+            score=prob,
+            raw_distribution=distribution,
             decision_records=records,
             usage=usage,
         )
@@ -199,13 +197,20 @@ class FakeExtractionEngine:
     ) -> ExtractionBatchResult:
         self.calls.append((stage_name, model_id, [f.path for f in target_fields]))
         first_uid = unit_inputs[0][0].unit.unit_id
+        native_text = unit_inputs[0][0].native_text or ""
+        is_mixed = "TEST-MIXED-01" in native_text
         data: dict[str, Any] = {}
         evidences: dict[str, list[Evidence]] = {}
         for f in target_fields:
             if f.field_type in ("integer", "number"):
-                data[f.name] = 1275 if stage_name == "escalating" else 1200
+                if is_mixed:
+                    data[f.name] = 9876 if stage_name == "escalating" else 2025
+                else:
+                    data[f.name] = 1275 if stage_name == "escalating" else 1200
+            elif f.name == "currency":
+                data[f.name] = "JPY" if is_mixed else "EUR"
             else:
-                data[f.name] = "TEST-NATIVE-01"
+                data[f.name] = "TEST-MIXED-01" if is_mixed else "TEST-NATIVE-01"
             evidences[f.path] = [Evidence(unit_id=first_uid, locator={}, quote=str(data[f.name]))]
         usage = UsageRecord(
             usage_id=f"use_ext_{job_id}_{len(self.calls)}",
@@ -315,9 +320,9 @@ def test_http_api_worker_escalation_and_document_reuse(tmp_path: Path):
     assert res_resp.status_code == 200
     res_body = res_resp.json()
     assert res_body["schema_valid"] is True
-    assert res_body["data"]["record_id"] == "TEST-NATIVE-01"
+    assert res_body["data"]["record_id"] == "TEST-MIXED-01"
     # Verify that /net_total escalated to google/gemini-4-argon on attempt 2
-    assert res_body["data"]["net_total"] == 1275
+    assert res_body["data"]["net_total"] == 9876
     assert res_body["fields"]["/net_total"]["attempt_count"] == 2
     assert res_body["fields"]["/net_total"]["verification"] == "SUPPORTED"
     assert any(

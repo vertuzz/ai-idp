@@ -105,8 +105,10 @@ evaluation-ready cases are accepted. `--allow-draft` explicitly permits developm
 diagnostics; those reports cannot be called a reviewed benchmark. Calibration and holdout
 never accept draft mode. Failures remain in the reported denominator.
 
+Page-batch relevance includes every requested field in each call and returns one score
+or flag per unit. The default group size is eight, subject to image and byte limits.
 Routing comparisons can explicitly set `--relevance-strategy decisions` (the default
-classifier probabilities) or `--relevance-strategy generative` (boolean/null matrix),
+classifier probabilities) or `--relevance-strategy generative` (one boolean/null flag per unit),
 `--relevance-batch-units N`, and `--parallel-decision-batches N`. For a sequential
 single-unit Decisions comparison, use `--relevance-strategy decisions
 --relevance-batch-units 1 --parallel-decision-batches 1`. Keep the same development

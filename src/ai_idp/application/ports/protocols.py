@@ -41,11 +41,15 @@ class UnitInputPayload:
 
 @dataclass(slots=True)
 class RelevanceResult:
-    """Selection scores: provider probabilities or binary flags; never fabricated confidence."""
+    """One unit's relevance to any requested field; not a unit/field matrix.
+
+    The score is a provider probability for Decisions or a binary retention flag
+    for generative classification. Only provider probabilities have a distribution.
+    """
 
     unit_id: str
-    field_scores: dict[str, float] = field(default_factory=dict)
-    raw_distributions: dict[str, dict[str, float]] = field(default_factory=dict)
+    score: float
+    raw_distribution: dict[str, float] = field(default_factory=dict)
     decision_records: list[DecisionRecord] = field(default_factory=list)
     usage: UsageRecord | None = None
 
@@ -111,16 +115,6 @@ class RelevanceEngine(Protocol):
 
 
 class DecisionEngine(RelevanceEngine, Protocol):
-    async def score_relevance(
-        self,
-        job_id: str,
-        unit_payload: UnitInputPayload,
-        fields: list[TargetFieldSpec],
-        instructions: str,
-        model_id: str,
-        batch_questions: bool = True,
-    ) -> RelevanceResult: ...
-
     async def select_modality(
         self,
         job_id: str,

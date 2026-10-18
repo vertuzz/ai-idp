@@ -28,6 +28,16 @@ environments, `uv run` entry points, `pathlib`, and a committed cross-platform d
 lock. Avoid shell-specific activation and OS-specific runtime assumptions. Initial bootstrap
 verification is on Windows; Linux/macOS verification remains pending.
 
+**ADR-012 — Complete-schema page-batch relevance (2026-10-18).** Replace v3
+unit/field questions with one question per source unit relative to any requested
+field. Every request receives the full field set and up to eight units/images,
+subject to byte and provider limits; up to eight groups run concurrently. Live
+provider checks accepted eight images and rejected nine. Use a threshold plus a
+document-wide top-K safety floor, retain raw unit scores and original source order,
+and keep downstream field evidence, verification and bounded recovery. Optional
+fields remain search targets. Pending v3 jobs require resubmission rather than
+reinterpretation of their saved checkpoints.
+
 ## Open questions for implementation experiments
 
 1. Which JSON Schema constructs are reliably supported by the chosen generative models (`anthropic/claude-haiku-5.5`, `google/gemini-4-argon`) and Pydantic AI pipeline (especially nested arrays, union types and $ref)?

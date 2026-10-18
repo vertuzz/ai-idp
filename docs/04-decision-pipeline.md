@@ -6,28 +6,32 @@ The decision model owns **content-dependent** relevance and extraction-strategy 
 
 The first implementation should directly test whether the chosen OpenRouter decision model supports the intended combination of image state, text, metadata, question batching and response probabilities in its current API revision.
 
-## Stage A: field-aware relevance
+## Stage A: page-batch relevance for the complete field set
 
-Inputs:
+Each request receives a bounded group of source units (PDF pages, DOCX blocks or
+image frames), their available images and native/semantic text, the **complete**
+requested field set with descriptions and nested schemas, and caller instructions.
+Required and optional fields are both search targets. Source content outside the
+batch is not concatenated into these relevance requests.
 
-- Unit image when available; native text/semantic HTML; document/unit metadata.
-- Requested JSON Schema and field descriptions, including optional extraction guidance.
-- Full native/semantic document text as context, with stable unit IDs, locators and caller guidance. The candidate unit also supplies all of its source images.
-- Stable field IDs or JSON paths.
+The classifier answers **one yes/no question per unit**: can this named unit directly
+provide or materially clarify at least one requested value? Other units supply context,
+not evidence that makes an unrelated candidate relevant. Headings, table continuations
+and visual-only evidence can make a unit relevant. This is not document-type classification.
 
-Output: per-unit, per-field (or closely related field-group) relevance scores, uncertainty, optional evidence tags and an overall candidate-unit map.
-
-Avoid a single document-wide boolean. A cover page may matter for document title but not for a balance-sheet value. Table continuations may appear irrelevant without neighboring context.
-
-Suggested decision question: 'Can this unit directly provide or materially clarify the value of field X?' Distinguish direct evidence from contextual relevance where the API makes this practical.
+The output is one relevance probability per unit, not a unit/field matrix. All fields
+share the selected source set for extraction; field-level evidence and verification
+remain separate downstream steps.
 
 ### Selection policy
 
-- Preserve raw probability vectors.
-- Keep a configurable relevance threshold **and** top-K fallback for each field/group; do not permanently discard all low-score units.
-- Retain ambiguous/continuation units for possible recovery.
-- Add an explicit missing-field coverage review after the first extraction pass.
-- Thresholds are pipeline selection parameters to be calibrated against labeled data, not indicators of verified correctness.
+- Preserve the classifier's original probability vector for each unit.
+- Select units at or above `RELEVANCE_THRESHOLD` (default 0.35).
+- Retain at least the document-wide top `RELEVANCE_TOP_K` units (default two) as a
+  safety floor, using source order for equal scores. There is no per-field top-K map.
+- Missing fields still receive bounded recovery over all source units, including
+  pages below the relevance threshold. Selection is not permanent deletion.
+- Scores and thresholds are routing parameters, not calibrated correctness guarantees.
 
 ## Stage B: extraction modality
 
@@ -45,38 +49,49 @@ A multimodal LLM can still be used for text-only extraction by providing text an
 
 Use OpenRouter Decisions API (`POST /api/alpha/decisions`) through a dedicated httpx adapter, with typed Pydantic request and response validation. Keep provider-specific question types (`noul`, `choice`, `score` with explicit `criteria`) out of the domain interfaces; normalize to typed probability decisions.
 
-A model may accept multiple named questions about one state, but batching can change accuracy. Benchmark one question per call versus grouped field questions, especially for the smaller Flash variant.
+A model may accept multiple named questions about one state, but batching can change accuracy. Benchmark one unit question per call versus grouped unit questions, especially for the smaller Flash variant.
 
-Pipeline v3 evaluates candidate units per relevance request. The default
-`RELEVANCE_STRATEGY=decisions` uses the configured decision model (`AI_IDP_DECISION_MODEL`,
-`perplexity/pplx-decider-v1.2`) for named questions and preserves its raw probability vectors.
-Every matrix entry or question names a specific unit ID, source locator and target field;
-the response retains an independent answer for every unit/field pair.
+Pipeline v4 implements this page-batch contract. The default
+`RELEVANCE_STRATEGY=decisions` uses `AI_IDP_DECISION_MODEL`
+(`perplexity/pplx-decider-v1.2`) and one named `noul` question per unit. A relevance
+decision has `field_path=null` and version `v4-page`; its field scope is the complete
+extraction specification. The final routing checkpoint stores ordered unit IDs,
+`unit_scores`, threshold and the document-wide safety floor.
 
-The alternative `RELEVANCE_STRATEGY=generative` uses `AI_IDP_RELEVANCE_MODEL` (the configured
-Haiku baseline) to return a structured unit/field boolean matrix in one model response.
-`true` is relevant, `false` is clearly irrelevant, and `null` is uncertain and retained.
-The matrix must contain every requested pair with the correct types. These are selection
-flags, never calibrated probabilities: decision records preserve the raw boolean/null,
-contain no invented probability vector, and field verification stays with the separate
-decision model. The existing relevance threshold applies only to Decisions probabilities;
-binary/uncertain selection flags are retained directly. Evidence on another
-page must not make the named candidate relevant. No document text or source image is
-silently removed to fit a request.
+`RELEVANCE_BATCH_UNITS=8` and `MAX_DECISION_IMAGES_PER_CALL=8` are the defaults.
+Live boundary checks on 2026-10-18 accepted eight images with 80 field descriptions,
+with and without native text. Nine, ten, twenty and fifty images were rejected by
+the configured provider with `At most 8 images are allowed per question`. Thus a
+100-page PDF with one image per page and 80 fields needs **13 relevance requests**,
+provided byte limits do not split groups further. This count excludes later modality,
+extraction, verification, recovery and HTTP retries. Count all embedded DOCX images:
+a block with multiple images uses multiple image slots, and text-only blocks use none.
 
-`RELEVANCE_BATCH_UNITS` defaults to one. Groups also respect the image and input-byte
-limits, and split field questions to respect `MAX_DECISION_QUESTIONS_PER_CALL` (24 by
-default, counting unit/field pairs). `MAX_PARALLEL_DECISION_BATCHES` defaults to eight;
-it bounds relevance workers and selected-unit modality workers within each job. The
-shared global/per-model concurrency and rate limits still apply across all jobs.
-Per-field top-K fallbacks are unchanged; equal scores use source order,
-not request completion order. Progress counts units whose field questions have all
-finished. Completed groups are checkpointed individually and reused after a retry.
+`MAX_DECISION_QUESTIONS_PER_CALL=24` now bounds **unit questions**, not unit/field
+pairs. The complete field set is included in every group and is never divided into
+additional relevance calls. Byte and image limits can reduce group size. A single
+unit or complete request exceeding supported limits fails explicitly; no text,
+image or field description is silently discarded.
+
+`MAX_PARALLEL_DECISION_BATCHES=8` bounds relevance workers and selected-unit modality
+workers within a job. Shared global/per-model capacity, rate limits and job-wide
+physical request budgets still apply. Completed groups are checkpointed individually;
+progress counts completed units and source order is independent of completion order.
+
+The alternative `RELEVANCE_STRATEGY=generative` returns one boolean/null flag per
+unit ID for the same complete field set. `true` is relevant, `false` is clearly
+irrelevant, and `null` is uncertain and retained. The response must contain every
+requested unit with the correct types. These flags have no probability vector and
+are never presented as calibrated confidence. Field verification remains with the
+separate decision model.
 
 For a sequential single-unit comparison, set `RELEVANCE_BATCH_UNITS=1` and
-`MAX_PARALLEL_DECISION_BATCHES=1`. Unbatched-question evaluation additionally sends
-one unit/field pair per request. Compare speed, cost and evidence-unit recall on the
-same development cases before attributing improvements to grouping.
+`MAX_PARALLEL_DECISION_BATCHES=1`. `--unbatched-questions` also means one **unit**
+question per relevance request, still carrying all fields. Compare the same development
+cases and references, including evidence recall rather than request count alone.
+Historical v3 reports measure a different relevance contract. Pending v3 jobs fail
+explicitly on a v4 worker and must be resubmitted; old checkpoints are not reinterpreted
+as page scores. Completed historical results remain inspectable.
 
 Persist: model ID, provider API version, question set/version, state artifact IDs/hashes, probability distribution, chosen option, latency, usage where available, failure status and retry count.
 

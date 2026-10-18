@@ -47,15 +47,19 @@ DOCX blocks retain every embedded image. Unsupported embedded formats such as EM
 
 All execution paths, including `run_inline=true` and evaluations, take renewable exclusive job leases. Finished model calls are checkpointed with their usage and reused on retry. A crash between a provider response and durable checkpoint storage can still require repeating that call; spending limits are estimates checked before each new call and after reported usage, not hard provider billing caps.
 
-Relevance scoring uses the decision classifier by default (`RELEVANCE_STRATEGY=decisions`,
-`perplexity/pplx-decider-v1.2`) or generative scoring (`RELEVANCE_STRATEGY=generative`,
-`AI_IDP_RELEVANCE_MODEL`), evaluating one source unit per request (`RELEVANCE_BATCH_UNITS=1`)
-and processing up to eight batches concurrently (`MAX_PARALLEL_DECISION_BATCHES=8`) by default.
-Answers remain separate for every unit and target field. Image/byte/question limits, shared provider
-capacity and job-wide physical request budgets apply to all parallel calls. Configure
-`RELEVANCE_STRATEGY`, `AI_IDP_DECISION_MODEL`, `AI_IDP_RELEVANCE_MODEL`, `RELEVANCE_BATCH_UNITS`,
-`MAX_DECISION_QUESTIONS_PER_CALL` and
-`MAX_PARALLEL_DECISION_BATCHES`; see the [decision pipeline](docs/04-decision-pipeline.md).
+Relevance scoring sends up to eight source units with images and text per request
+(`RELEVANCE_BATCH_UNITS=8`, `MAX_DECISION_IMAGES_PER_CALL=8`), together with the
+**complete extraction field set**. The classifier returns one relevance score per
+unit for any requested field, not one score per unit/field pair. A 100-page PDF with
+80 fields therefore needs 13 relevance requests when byte limits allow eight pages
+per group. Up to eight groups run concurrently (`MAX_PARALLEL_DECISION_BATCHES=8`).
+`RELEVANCE_STRATEGY=decisions` uses the configured decision classifier;
+`RELEVANCE_STRATEGY=generative` returns one boolean/null flag per unit instead.
+Threshold selection and a document-wide top-two safety floor retain source candidates.
+All fields share this selected set; evidence, verification and recovery remain per field.
+Image/byte/question limits, shared provider capacity and job-wide physical request budgets
+still apply. See the [decision pipeline](docs/04-decision-pipeline.md). Pending v3 jobs
+must be resubmitted after upgrading to v4; completed results remain accessible.
 
 PostgreSQL concurrency and recovery regressions are opt-in: set `AI_IDP_TEST_POSTGRES_URL` to a development database and run `uv run --group dev --group evaluation python -m pytest -q tests/integration/test_postgres_leases.py`. Tests migrate and remove their own isolated schemas and make no model calls. CI configures offline tests on Windows, Linux and macOS and a separate PostgreSQL job.
 
@@ -94,7 +98,7 @@ history, source text/images and paginated decisions are available for inspection
 |---|---|
 | HTTP file upload and async extraction jobs | S3 and presigned uploads |
 | PDF, DOCX, PNG, JPEG, TIFF | Office-faithful page rendering |
-| Field-aware unit relevance and modality routing | Classical OCR, Docling, LibreOffice |
+| Schema-aware page-batch relevance and modality routing | Classical OCR, Docling, LibreOffice |
 | Dynamic JSON Schema extraction | Fixed industry schemas |
 | Provenance and field verification | Unrestricted autonomous agents |
 | Coverage review and bounded escalation | SaaS billing, multi-tenancy, user authentication |
@@ -120,6 +124,7 @@ Deterministic **mechanical** operations are still required: parsing files, rende
 | [Implementation plan](docs/10-implementation-plan.md) | Ordered milestones and definition of done |
 | [Decisions](docs/11-decisions-and-open-questions.md) | Architectural decisions and unresolved questions |
 | [Operations and release gates](docs/13-operations-and-release.md) | Deployment, limits, schemas, backup/restore, human review and acceptance |
+| [Page-batch validation](docs/16-page-batch-validation.md) | v4 routing contract, offline checks and the 72-file development run |
 
 ## Public-project rules
 

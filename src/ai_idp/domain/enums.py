@@ -68,3 +68,10 @@ class PipelineMode(StrEnum):
     ALWAYS_VISION = "always_vision"
     TEXT_ONLY = "text_only"
     DECISION_NO_VERIFY = "decision_no_verify"
+
+
+class CheckOutcome(StrEnum):
+    PASS = "PASS"
+    FAIL = "FAIL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+    INDETERMINATE = "INDETERMINATE"

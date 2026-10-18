@@ -34,6 +34,7 @@ from ai_idp.application.services.request_budget import (
     active_request_budget,
 )
 from ai_idp.domain.enums import (
+    CheckOutcome,
     FieldStatus,
     JobStage,
     JobStatus,
@@ -55,6 +56,7 @@ from ai_idp.domain.errors import (
 )
 from ai_idp.domain.field_paths import assemble_fields, concrete_targets, get_pointer
 from ai_idp.domain.models import (
+    CheckResult,
     DocumentUnit,
     Evidence,
     ExtractionResult,
@@ -70,6 +72,13 @@ from ai_idp.domain.models import (
 )
 from ai_idp.domain.partial_data import project_partial_data
 from ai_idp.domain.schema_normalizer import validate_data_against_schema
+from ai_idp.domain.validation import (
+    extract_qualifiers,
+    extract_units_and_currency,
+    validate_field_association,
+    validate_source_anchoring,
+    validate_typed_value,
+)
 
 
 def _guess_image_media_type(image_ref: str) -> str:
@@ -504,6 +513,11 @@ class ExtractionPipelineService:
             raise JobNotFoundError(f"Extraction specification '{job.spec_id}' not found.")
 
         config = job.configuration
+        if config.pipeline_version != "v4":
+            raise DomainError(
+                "This job uses an older relevance contract; submit a new extraction job.",
+                code="unsupported_pipeline_version",
+            )
 
         def record_usage(usage: UsageRecord | None) -> None:
             if usage is None:
@@ -805,9 +819,10 @@ class ExtractionPipelineService:
             for field_spec in spec.fields:
                 fv = field_values[field_spec.path]
                 populated = self._is_populated(fv.value)
+                has_failed_check = any(c.outcome == CheckOutcome.FAIL for c in fv.check_results)
                 if populated:
                     if should_verify:
-                        if fv.verification == VerificationStatus.SUPPORTED:
+                        if fv.verification == VerificationStatus.SUPPORTED and not has_failed_check:
                             fv.status = FieldStatus.VERIFIED
                         else:
                             fv.status = FieldStatus.UNRESOLVED
@@ -819,8 +834,9 @@ class ExtractionPipelineService:
                     else:
                         fv.status = FieldStatus.UNVERIFIED
                 else:
+                    is_supported = fv.verification == VerificationStatus.SUPPORTED
                     if field_spec.nullable and (
-                        not should_verify or fv.verification == VerificationStatus.SUPPORTED
+                        not should_verify or (is_supported and not has_failed_check)
                     ):
                         fv.status = (
                             FieldStatus.VERIFIED if should_verify else FieldStatus.UNVERIFIED
@@ -922,9 +938,7 @@ class ExtractionPipelineService:
             self._job_repo.update_job_progress(job.job_id, progress=progress)
             return [p.unit.unit_id for p in unit_payloads]
 
-        unit_max_score: dict[str, float] = {}
-        field_unit_scores: dict[str, list[tuple[float, str]]] = {f.path: [] for f in spec.fields}
-
+        unit_scores: dict[str, float] = {}
         page_limit = (
             min(config.relevance_batch_units, config.max_decision_questions_per_call)
             if config.batch_relevance_questions
@@ -936,14 +950,10 @@ class ExtractionPipelineService:
             max_bytes=config.max_model_input_bytes,
             max_images=config.max_decision_images_per_call,
         )
-        calls = []
-        completed_pairs: dict[str, int] = {p.unit.unit_id: 0 for p in unit_payloads}
 
-        async def score_group(payloads, fields):
-            identity = json.dumps(
-                [[p.unit.unit_id for p in payloads], [f.path for f in fields]]
-            ).encode()
-            key = "relevance:v3:" + hashlib.sha256(identity).hexdigest()[:32]
+        async def score_group(payloads):
+            identity = json.dumps([p.unit.unit_id for p in payloads]).encode()
+            key = "relevance:v4-page:" + hashlib.sha256(identity).hexdigest()[:32]
             part = await self._model_step(
                 job.job_id,
                 key,
@@ -956,7 +966,7 @@ class ExtractionPipelineService:
                     ).score_relevance_batch,
                     job_id=job.job_id,
                     unit_payloads=payloads,
-                    fields=fields,
+                    fields=spec.fields,
                     instructions=spec.instructions,
                     model_id=(
                         config.relevance_model
@@ -967,60 +977,42 @@ class ExtractionPipelineService:
             )
             expected_ids = {p.unit.unit_id for p in payloads}
             if set(part.results) != expected_ids or any(
-                set(result.field_scores) != {f.path for f in fields}
-                for result in part.results.values()
+                result.unit_id != uid or not 0 <= result.score <= 1
+                for uid, result in part.results.items()
             ):
-                raise ProviderError(
-                    "Relevance response omitted or changed requested unit/field pairs."
-                )
+                raise ProviderError("Relevance response omitted or changed requested units/scores.")
             for uid, result in part.results.items():
                 self._result_repo.record_decisions(result.decision_records)
-                for field in fields:
-                    score = result.field_scores[field.path]
-                    field_unit_scores[field.path].append((score, uid))
-                    unit_max_score[uid] = max(unit_max_score.get(uid, 0.0), score)
-                completed_pairs[uid] += len(fields)
+                unit_scores[uid] = result.score
             record_usage(part.usage)
-            progress.units_scored = sum(n == len(spec.fields) for n in completed_pairs.values())
+            progress.units_scored = len(unit_scores)
             self._job_repo.update_job_progress(job.job_id, progress=progress)
 
-        for batch in batches:
-            payloads = [p for p, _ in batch]
-            width = (
-                max(1, config.max_decision_questions_per_call // len(payloads))
-                if config.batch_relevance_questions
-                else 1
-            )
-            for start in range(0, len(spec.fields), width):
-                calls.append(partial(score_group, payloads, spec.fields[start : start + width]))
-        await _run_bounded(calls, config.max_parallel_decision_batches)
-
-        selected_set: set[str] = set()
-        for uid, score in unit_max_score.items():
-            selected = (
+        await _run_bounded(
+            [partial(score_group, [p for p, _ in batch]) for batch in batches],
+            config.max_parallel_decision_batches,
+        )
+        selected_set = {
+            uid
+            for uid, score in unit_scores.items()
+            if (
                 score == 1.0
                 if config.relevance_strategy == "generative"
                 else score >= config.relevance_threshold
             )
-            if selected:
-                selected_set.add(uid)
-
-        # Ensure top-K per field fallback so relevant pages are not missed
-        top_k = max(1, config.relevance_top_k)
-        for _f_path, scored_list in field_unit_scores.items():
-            order = {p.unit.unit_id: i for i, p in enumerate(unit_payloads)}
-            ranked = sorted(scored_list, key=lambda item: (-item[0], order[item[1]]))
-            for _score, uid in ranked[:top_k]:
-                selected_set.add(uid)
-
-        # Preserve original reading order
+        }
+        # A document-wide safety floor replaces per-field top-K selection. Ties
+        # retain source order, independent of parallel request completion order.
+        ranked = sorted(unit_payloads, key=lambda p: -unit_scores[p.unit.unit_id])
+        selected_set.update(p.unit.unit_id for p in ranked[: max(1, config.relevance_top_k)])
         ordered_selected = [p.unit.unit_id for p in unit_payloads if p.unit.unit_id in selected_set]
         self._result_repo.save_step(
             job.job_id,
             "routing:selection",
             {
                 "selected_unit_ids": ordered_selected,
-                "field_unit_scores": field_unit_scores,
+                "unit_scores": {p.unit.unit_id: unit_scores[p.unit.unit_id] for p in unit_payloads},
+                "scope": "any_requested_field",
                 "threshold": config.relevance_threshold,
                 "strategy": config.relevance_strategy,
                 "top_k": config.relevance_top_k,
@@ -1082,6 +1074,7 @@ class ExtractionPipelineService:
         fields_to_verify: list[tuple[TargetFieldSpec, Any, list[Evidence]]] = []
         for field_spec in spec.fields:
             fv = field_values[field_spec.path]
+            self._run_mechanical_checks(fv, field_spec, payload_by_id)
             fields_to_verify.append((field_spec, fv.value, fv.sources))
 
         if not fields_to_verify:
@@ -1136,6 +1129,14 @@ class ExtractionPipelineService:
                 break
             attempt_num = 1 + extra_idx
             model_to_use = config.escalation_model
+            # Targeted context: pass failure reason in field description
+            targeted_fields = []
+            for f in remaining:
+                reason = field_values[f.path].unresolved_reason
+                prefix = f.description + " " if f.description else ""
+                fail_note = f"[Previous attempt failed: {reason}]" if reason else ""
+                desc = (prefix + fail_note).strip()
+                targeted_fields.append(f.model_copy(update={"description": desc}))
             with self._telemetry.span(
                 "pipeline.escalate_fields",
                 {
@@ -1149,7 +1150,7 @@ class ExtractionPipelineService:
                     key=f"{key_prefix}extract:escalation:{extra_idx}",
                     job_id=job.job_id,
                     spec=spec,
-                    target_fields=remaining,
+                    target_fields=targeted_fields,
                     unit_inputs=rich_inputs,
                     model_id=model_to_use,
                     stage_name="escalating",
@@ -1173,13 +1174,15 @@ class ExtractionPipelineService:
                         model_id=model_to_use,
                         status="completed",
                     )
-                    self._result_repo.record_field_attempt(job.job_id, attempt)
                     fv.attempts.append(attempt)
                     fv.attempt_count = len(fv.attempts)
                     fv.verification = None
                     fv.raw_probabilities = {}
                     fv.value = new_val
                     fv.sources = new_evidences
+                    self._run_mechanical_checks(fv, f_spec, payload_by_id)
+                    attempt.check_results = list(fv.check_results)
+                    self._result_repo.record_field_attempt(job.job_id, attempt)
                     verify_subset.append((f_spec, new_val, new_evidences))
 
                 if verify_subset:
@@ -1199,6 +1202,9 @@ class ExtractionPipelineService:
                     f
                     for f in remaining
                     if field_values[f.path].verification != VerificationStatus.SUPPORTED
+                    or any(
+                        c.outcome == CheckOutcome.FAIL for c in field_values[f.path].check_results
+                    )
                 ]
 
     async def _run_coverage_review(
@@ -1289,6 +1295,58 @@ class ExtractionPipelineService:
                     self._apply_verification(field_values[f_path], outcome, config)
 
     @staticmethod
+    def _run_mechanical_checks(
+        fv: FieldValue,
+        field_spec: TargetFieldSpec,
+        payload_by_id: dict[str, UnitInputPayload],
+    ) -> None:
+        fv.check_results = []
+        if fv.sources:
+            for ev in fv.sources:
+                payload = payload_by_id.get(ev.unit_id)
+                unit = payload.unit if payload else None
+                native_text = payload.native_text if payload else None
+                quote_text = fv.raw_value or ev.quote
+                res = validate_source_anchoring(
+                    unit=unit,
+                    native_text=native_text,
+                    evidence=ev,
+                    raw_or_quote=quote_text,
+                )
+                fv.check_results.append(res)
+        elif fv.value is not None and fv.value != [] and fv.value != {}:
+            fv.check_results.append(
+                CheckResult(
+                    check_name="source_anchoring",
+                    outcome=CheckOutcome.FAIL,
+                    reason_code="MISSING_SOURCE_CITATION",
+                    message="Populated field has no source evidence citations.",
+                )
+            )
+
+        primary_text = fv.raw_value or (fv.sources[0].quote if fv.sources else None)
+        if primary_text:
+            quals = extract_qualifiers(primary_text)
+            if quals:
+                fv.qualifiers = list(dict.fromkeys(fv.qualifiers + quals))
+            unit_str = extract_units_and_currency(primary_text)
+            if unit_str and not fv.unit:
+                fv.unit = unit_str
+
+        typed_checks = validate_typed_value(
+            value=fv.value,
+            raw_text=primary_text,
+            field_spec=field_spec,
+        )
+        fv.check_results.extend(typed_checks)
+
+        assoc_checks = validate_field_association(
+            field_name=field_spec.name,
+            field_value=fv.value,
+        )
+        fv.check_results.extend(assoc_checks)
+
+    @staticmethod
     def _apply_verification(
         field: FieldValue, outcome: VerificationOutcome, config: PipelineConfiguration
     ) -> None:
@@ -1298,12 +1356,17 @@ class ExtractionPipelineService:
             outcome.rationale if (outcome.status != VerificationStatus.SUPPORTED) else None
         )
         needs_citation = field.value is not None and field.value != [] and field.value != {}
+        failed_checks = [c for c in field.check_results if c.outcome == CheckOutcome.FAIL]
         if outcome.status == VerificationStatus.SUPPORTED and (
             outcome.raw_probabilities.get("SUPPORTED", 0.0)
             < config.verification_supported_threshold
             or (needs_citation and not field.sources)
+            or bool(failed_checks)
         ):
             field.verification = VerificationStatus.INSUFFICIENT_EVIDENCE
+            if failed_checks:
+                reasons = ", ".join(c.reason_code for c in failed_checks)
+                field.unresolved_reason = f"Mechanical check failed: {reasons}"
 
     @staticmethod
     def _is_populated(value: Any) -> bool:
