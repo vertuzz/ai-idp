@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse, Response
 
 from ai_idp.adapters.inbound.http.body_limit import BodyLimitMiddleware, RequestBodyTooLarge
 from ai_idp.adapters.inbound.http.dependencies import AppContainer, build_container
+from ai_idp.adapters.inbound.http.result_pages import router as result_pages_router
 from ai_idp.adapters.inbound.http.schemas import (
     CreateExtractionRequest,
     CreateExtractionResponse,
@@ -116,6 +117,7 @@ def create_app(
     )
     v1 = APIRouter(prefix="/v1", dependencies=router_dependencies)
     v1.include_router(source_preview_router)
+    v1.include_router(result_pages_router)
 
     @v1.post("/documents", status_code=201, response_model=DocumentUploadResponse)
     async def upload_document(
@@ -316,6 +318,18 @@ def create_app(
     @v1.get("/extractions/{job_id}/result", response_model=ExtractionResultResponse)
     async def get_extraction_result(request: Request, job_id: str) -> ExtractionResultResponse:
         c: AppContainer = request.app.state.container
+        c.inspect_job_use_case.get_job(job_id)
+        view = c.result_repo.load_step(job_id, "view:manifest")
+        if view and (
+            view["field_count"] > 1000
+            or any(collection["total_items"] > 100 for collection in view["collections"])
+        ):
+            raise DomainError(
+                f"Use /v1/extractions/{job_id}/result/manifest and collection pages, "
+                "or /result/export for the complete JSON.",
+                code="result_requires_pagination",
+                http_status=413,
+            )
         result = c.inspect_job_use_case.get_result(job_id)
         fields_resp = {
             f_path: FieldResultItemResponse(

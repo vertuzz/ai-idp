@@ -52,6 +52,7 @@ from ai_idp.domain.errors import (
     JobLeaseLostError,
     JobNotFoundError,
     JobTimeLimitExceededError,
+    ModelOutputLimitExceededError,
     ProviderError,
     RateLimitedError,
 )
@@ -231,6 +232,8 @@ class ExtractionPipelineService:
         self, job_id: str, key: str, result_type: type[T], call: Callable[[], Awaitable[T]]
     ) -> T:
         adapter = TypeAdapter(result_type)
+        if len(key) > 120:
+            key = "step:" + hashlib.sha256(key.encode()).hexdigest()
         saved = self._result_repo.load_step(job_id, key)
         if saved is not None:
             self._telemetry.record_event("model.checkpoint_reused", {"job_id": job_id, "step": key})
@@ -301,6 +304,72 @@ class ExtractionPipelineService:
         return result
 
     async def _extract_bounded(self, *, key: str, **kwargs: Any) -> ExtractionBatchResult:
+        from ai_idp.application.services.partitioned_extraction import (
+            contains_array,
+            extract_partitioned,
+        )
+
+        if any(contains_array(f.raw_schema) for f in kwargs["target_fields"]):
+            return await extract_partitioned(self, key, **kwargs)
+        fields = kwargs["target_fields"]
+        if len(fields) > 8:
+            data, evidence = {}, {}
+            for index in range(0, len(fields), 8):
+                result = await self._extract_bounded(
+                    key=f"{key}:fields:{index}",
+                    **{**kwargs, "target_fields": fields[index : index + 8]},
+                )
+                data.update(result.data)
+                evidence.update(result.evidence_by_field)
+            return ExtractionBatchResult(
+                data=data, evidence_by_field=evidence, model_id=kwargs["model_id"]
+            )
+        try:
+            return await self._extract_legacy(key=key, **kwargs)
+        except ModelOutputLimitExceededError:
+            if len(fields) > 1:
+                data, evidence = {}, {}
+                middle = len(fields) // 2
+                for index, group in enumerate((fields[:middle], fields[middle:])):
+                    result = await self._extract_bounded(
+                        key=f"{key}:split:{index}", **{**kwargs, "target_fields": group}
+                    )
+                    data.update(result.data)
+                    evidence.update(result.evidence_by_field)
+                return ExtractionBatchResult(
+                    data=data, evidence_by_field=evidence, model_id=kwargs["model_id"]
+                )
+            target = fields[0]
+            if target.field_type == "object":
+                from ai_idp.domain.field_paths import escape_segment
+
+                data, evidence = {}, {}
+                for name, node in target.raw_schema["properties"].items():
+                    path = target.path + "/" + escape_segment(name)
+                    types = node["type"] if isinstance(node["type"], list) else [node["type"]]
+                    kind = next((t for t in types if t != "null"), "null")
+                    child = TargetFieldSpec(
+                        path=path,
+                        name=path,
+                        field_type=kind,
+                        raw_schema=node,
+                        is_array=kind == "array",
+                        description=node.get("description", ""),
+                    )
+                    result = await self._extract_bounded(
+                        key=f"{key}:child:{len(data)}", **{**kwargs, "target_fields": [child]}
+                    )
+                    data[name] = result.data.get(path)
+                    evidence.update(result.evidence_by_field)
+                evidence[target.path] = [s for sources in evidence.values() for s in sources]
+                return ExtractionBatchResult(
+                    data={target.name: data},
+                    evidence_by_field=evidence,
+                    model_id=kwargs["model_id"],
+                )
+            raise
+
+    async def _extract_legacy(self, *, key: str, **kwargs: Any) -> ExtractionBatchResult:
         job = self._job_repo.get_job(kwargs["job_id"])
         config = job.configuration
         batches = unit_batches(
@@ -396,6 +465,65 @@ class ExtractionPipelineService:
         )
 
     async def _verify_bounded(self, *, key: str, **kwargs: Any) -> VerificationBatchResult:
+        # Bounded verification values as well as source batches. A container is
+        # supported only when every portion is supported; no portion can override
+        # a contradiction in another. This checks members, not omission-free coverage.
+        small, outcomes, decisions = [], {}, []
+        for target, value, citations in kwargs["fields_to_verify"]:
+            if isinstance(value, list) and len(value) > 25:
+                fragments = [value[i : i + 25] for i in range(0, len(value), 25)]
+            elif isinstance(value, dict) and len(json.dumps(value)) > 8000:
+                fragments = [{k: v} for k, v in value.items()]
+                if len(fragments) == 1:
+                    from ai_idp.domain.errors import ModelInputLimitExceededError
+
+                    raise ModelInputLimitExceededError(
+                        "An indivisible verification value exceeds its limit."
+                    )
+            else:
+                small.append((target, value, citations))
+                continue
+            results = []
+            for index, fragment in enumerate(fragments):
+                scoped_target = target.model_copy(
+                    update={
+                        "description": target.description
+                        + " Verify this portion only; other portions are checked separately."
+                    }
+                )
+                # Original source remains available; citations are partitioned as
+                # references, never substituted for source or silently truncated.
+                result = await self._verify_bounded(
+                    key=f"{key}:portion:{hashlib.sha256(target.path.encode()).hexdigest()[:12]}:{index}",
+                    **{**kwargs, "fields_to_verify": [(scoped_target, fragment, [])]},
+                )
+                results.append(result.outcomes[target.path])
+                decisions.extend(result.decision_records)
+            contradicted = next(
+                (r for r in results if r.status == VerificationStatus.CONTRADICTED), None
+            )
+            insufficient = next(
+                (r for r in results if r.status != VerificationStatus.SUPPORTED), None
+            )
+            outcomes[target.path] = contradicted or insufficient or results[0]
+            # Completeness of a large list cannot be inferred from valid individual
+            # pages. Keep that claim unresolved until independent coverage is checked.
+            if outcomes[target.path].status == VerificationStatus.SUPPORTED:
+                outcomes[target.path] = outcomes[target.path].model_copy(
+                    update={
+                        "status": VerificationStatus.INSUFFICIENT_EVIDENCE,
+                        "rationale": "Members checked in portions; completeness needs review.",
+                    }
+                )
+        if small:
+            result = await self._verify_source_batches(
+                key=key, **{**kwargs, "fields_to_verify": small}
+            )
+            outcomes.update(result.outcomes)
+            decisions.extend(result.decision_records)
+        return VerificationBatchResult(outcomes=outcomes, decision_records=decisions)
+
+    async def _verify_source_batches(self, *, key: str, **kwargs: Any) -> VerificationBatchResult:
         job = self._job_repo.get_job(kwargs["job_id"])
         config = job.configuration
         payloads = kwargs["unit_payloads_by_id"]
@@ -417,7 +545,8 @@ class ExtractionPipelineService:
             max_images=config.max_decision_images_per_call,
         )
         fields = kwargs["fields_to_verify"]
-        field_groups = [fields[i : i + 24] for i in range(0, len(fields), 24)]
+        field_limit = config.max_decision_questions_per_call
+        field_groups = [fields[i : i + field_limit] for i in range(0, len(fields), field_limit)]
         if len(batches) <= 1 and len(field_groups) <= 1:
             result = await self._model_step(
                 job.job_id,
@@ -696,6 +825,11 @@ class ExtractionPipelineService:
                     for f in spec.fields
                     if field_values[f.path].verification
                     in (VerificationStatus.CONTRADICTED, VerificationStatus.INSUFFICIENT_EVIDENCE)
+                    and not (
+                        f.is_array
+                        and isinstance(field_values[f.path].value, list)
+                        and len(field_values[f.path].value) > 25
+                    )
                 ]
                 if needs_escalation:
                     self._job_repo.update_job_progress(job_id, stage=JobStage.ESCALATING)
@@ -739,7 +873,9 @@ class ExtractionPipelineService:
 
             # Expand concrete array items and object leaves after root recovery.
             initial_data = assemble_fields(field_values)
-            concrete = concrete_targets(spec.schema_json, initial_data)
+            concrete = concrete_targets(
+                spec.schema_json, initial_data, max_fields=config.max_extracted_fields
+            )
             nested = [f for f in concrete if f.path not in field_values]
             for target in nested:
                 root_path = "/" + target.path.split("/")[1]
@@ -833,6 +969,8 @@ class ExtractionPipelineService:
                         record_usage=record_usage,
                         key_prefix="reconciled:",
                     )
+            if should_verify:
+                await self._verify_collection_coverage(job, concrete, field_values, payload_by_id)
             spec = spec.model_copy(update={"fields": concrete})
             progress.fields_total = len(concrete)
 
@@ -882,6 +1020,26 @@ class ExtractionPipelineService:
                 JobStatus.COMPLETED_WITH_UNRESOLVED
                 if unresolved_paths or not schema_ok
                 else JobStatus.COMPLETED
+            )
+            from ai_idp.application.services.result_views import publish_result_view
+
+            final_data = project_partial_data(assemble_fields(field_values), spec.schema_json)
+            if len(json.dumps(final_data, ensure_ascii=True).encode()) > config.max_result_bytes:
+                raise DocumentLimitExceededError("Final result-byte limit exceeded.")
+            valid, errors = validate_data_against_schema(final_data, spec.schema_json)
+            publish_result_view(
+                self._result_repo,
+                ExtractionResult(
+                    job_id=job_id,
+                    status=final_status,
+                    data=final_data,
+                    fields=field_values,
+                    schema_valid=valid,
+                    schema_errors=errors,
+                    unresolved_fields=unresolved_paths,
+                    usage=self._job_repo.get_job(job_id).usage,
+                ),
+                page_bytes=config.result_page_bytes,
             )
             self._result_repo.save_final_result(job_id, final_status, field_values)
             self._job_repo.update_job_progress(
@@ -1083,6 +1241,84 @@ class ExtractionPipelineService:
             self._result_repo.record_decision(mod_res.decision_record)
             record_usage(mod_res.usage)
             return mod_res.decision.modality
+
+    async def _verify_collection_coverage(self, job, targets, values, payloads):
+        """Check counts independently against every original unit, including unselected ones.
+
+        Counts establish source coverage; per-record/leaf verification separately checks
+        values and associations. Neither a model's stop flag nor valid JSON proves coverage.
+        """
+        from ai_idp.application.services.partitioned_extraction import digest
+
+        parts = [
+            p
+            for _, p in self._result_repo.list_steps(
+                job.job_id, "scope-count:", limit=job.configuration.max_extraction_parts * 4
+            )
+            if p["stage"] == "extracting"
+        ]
+        for target in targets:
+            parent = values[target.path]
+            if not target.is_array or not isinstance(parent.value, list) or not parent.value:
+                continue
+            if parent.verification == VerificationStatus.CONTRADICTED or any(
+                c.outcome == CheckOutcome.FAIL for c in parent.check_results
+            ):
+                continue
+            applicable = [p for p in parts if p["path"] == target.path]
+            if not applicable:
+                continue
+            children = [v for p, v in values.items() if p.startswith(target.path + "/")]
+            if any(
+                v.verification != VerificationStatus.SUPPORTED
+                or any(c.outcome == CheckOutcome.FAIL for c in v.check_results)
+                for v in children
+            ):
+                continue
+            outcomes = []
+            for uid, payload in payloads.items():
+                count = sum(p["count"] for p in applicable if p["source_unit"] == uid)
+                count_target = TargetFieldSpec(
+                    path=target.path,
+                    name="owned_record_count",
+                    field_type="integer",
+                    raw_schema={"type": "integer"},
+                    description=(
+                        f"Exact number of distinct requested records for {target.path} "
+                        f"({target.description}) whose record STARTS in owned unit {uid}. "
+                        "Independently count original source records matching the caller's "
+                        "field meaning. Exclude headers and repeated context; include equal "
+                        "but distinct records. A candidate count of zero asserts no matching "
+                        "record starts here. Do not trust an extractor's count."
+                    ),
+                )
+                result = await self._model_step(
+                    job.job_id,
+                    f"coverage:{digest(target.path)}:{digest(uid)}",
+                    VerificationBatchResult,
+                    partial(
+                        self._decision_engine.verify_fields,
+                        job_id=job.job_id,
+                        fields_to_verify=[(count_target, count, [])],
+                        unit_payloads_by_id={uid: payload},
+                        model_id=job.configuration.decision_model,
+                    ),
+                )
+                self._result_repo.record_decisions(result.decision_records)
+                outcome = result.outcomes[target.path]
+                outcomes.append(outcome)
+            if (
+                outcomes
+                and all(o.status == VerificationStatus.SUPPORTED for o in outcomes)
+                and not any(p.unit.metadata.get("unavailable_images") for p in payloads.values())
+            ):
+                weakest = min(outcomes, key=lambda o: o.raw_probabilities.get("SUPPORTED", 0))
+                self._apply_verification(parent, weakest, job.configuration)
+            elif outcomes:
+                parent.verification = VerificationStatus.INSUFFICIENT_EVIDENCE
+                parent.unresolved_reason = (
+                    "Independent source record counts did not establish completeness."
+                )
 
     async def _verify_fields(
         self,
@@ -1479,6 +1715,15 @@ class ExtractionPipelineService:
                             artifact_ref=uid,
                             artifact_sha256=h,
                         )
+            locator.pop("cell", None)
+            if span is not None:
+                matched_cells = [
+                    c["cell"]
+                    for c in unit.metadata.get("cell_spans", [])
+                    if c["start"] <= span.start < span.end <= c["end"]
+                ]
+                if len(matched_cells) == 1:
+                    locator["cell"] = matched_cells[0]
             normalized.append(
                 Evidence(
                     unit_id=uid,

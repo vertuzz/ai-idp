@@ -78,6 +78,7 @@ with warnings.catch_warnings():
         schema_hash: str
         instructions: str = ""
         fields: list[TargetFieldSpec] = Field(default_factory=list)
+        output_page: dict[str, Any] | None = None
         created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -234,6 +235,11 @@ class PipelineConfiguration(BaseModel):
     max_units_per_call: int = 12
     max_decision_images_per_call: int = 8
     max_prepared_input_bytes: int = 256 * 1024 * 1024
+    extraction_page_items: int = 25
+    max_extraction_parts: int = 128
+    max_extracted_fields: int = 50_000
+    max_result_bytes: int = 32 * 1024 * 1024
+    result_page_bytes: int = 1024 * 1024
     model_parameters: dict[str, Any] = Field(default_factory=dict)
     prompt_versions: dict[str, str] = Field(default_factory=dict)
 

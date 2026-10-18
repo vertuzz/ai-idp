@@ -49,6 +49,11 @@ def build_pipeline_config(
         max_parallel_decision_batches=settings.max_parallel_decision_batches,
         max_decision_images_per_call=settings.max_decision_images_per_call,
         max_prepared_input_bytes=settings.max_prepared_input_mib * 1024 * 1024,
+        extraction_page_items=settings.extraction_page_items,
+        max_extraction_parts=settings.max_extraction_parts,
+        max_extracted_fields=settings.max_extracted_fields,
+        max_result_bytes=settings.max_result_bytes,
+        result_page_bytes=settings.result_page_bytes,
         model_parameters={"temperature": 0.0, "max_output_tokens": settings.max_output_tokens},
         prompt_versions={
             "relevance": "v4-page",

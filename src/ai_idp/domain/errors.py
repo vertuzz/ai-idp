@@ -43,6 +43,10 @@ class MalformedDocumentError(DomainError):
     http_status = 422
 
 
+class EncryptedDocumentError(MalformedDocumentError):
+    code = "encrypted_document"
+
+
 class InvalidSchemaError(DomainError):
     code = "invalid_schema"
     http_status = 422
@@ -90,6 +94,11 @@ class JobTimeLimitExceededError(DomainError):
 
 class ModelInputLimitExceededError(DomainError):
     code = "model_input_limit_exceeded"
+    http_status = 422
+
+
+class ModelOutputLimitExceededError(DomainError):
+    code = "model_output_limit_exceeded"
     http_status = 422
 
 

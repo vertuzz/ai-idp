@@ -81,6 +81,22 @@ def locate(
     ):
         return {**base, "status": "unit_only", "reason": "partial_token"}
     geometry_ref = unit.metadata.get("text_geometry_ref")
+    if unit.kind.value == "spreadsheet_range":
+        cells = [
+            c["cell"]
+            for c in unit.metadata.get("cell_spans", [])
+            if c["start"] <= start < end <= c["end"]
+        ]
+        if len(cells) == 1:
+            return {
+                **base,
+                "status": "exact",
+                "method": "spreadsheet_cell",
+                "cell": cells[0],
+                "sheet_name": unit.source_locator["sheet_name"],
+                "start": start,
+                "end": end,
+            }
     if not geometry_ref:
         return {**base, "status": "unit_only", "start": start, "end": end}
     geometry = json.loads(container.blob_store.get_text(geometry_ref))

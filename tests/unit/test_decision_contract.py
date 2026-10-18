@@ -182,7 +182,11 @@ async def test_extractor_preserves_full_text_and_every_image(monkeypatch):
 
         async def run(self, parts):
             sent.extend(parts)
-            return SimpleNamespace(output={"id": "value", "_evidence": []}, usage=lambda: None)
+            return SimpleNamespace(
+                output={"id": "value", "_evidence": []},
+                usage=lambda: None,
+                response=SimpleNamespace(finish_reason="stop"),
+            )
 
     monkeypatch.setattr(module, "Agent", Agent)
     monkeypatch.setattr(module, "OpenAIChatModel", lambda *args, **kwargs: None)

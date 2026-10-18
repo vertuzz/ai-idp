@@ -486,6 +486,22 @@ class SqlAlchemyResultRepository:
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
 
+    def list_steps(
+        self, job_id: str, prefix: str, *, after: str = "", limit: int = 100
+    ) -> list[tuple[str, dict[str, Any]]]:
+        with self._session_factory() as session:
+            rows = session.scalars(
+                select(JobStepRow)
+                .where(
+                    JobStepRow.job_id == job_id,
+                    JobStepRow.step_key.startswith(prefix),
+                    JobStepRow.step_key > after,
+                )
+                .order_by(JobStepRow.step_key)
+                .limit(limit)
+            ).all()
+            return [(r.step_key, r.payload_json) for r in rows]
+
     def load_step(self, job_id: str, step_key: str) -> dict[str, Any] | None:
         with self._session_factory() as session:
             row = session.get(JobStepRow, (job_id, step_key))

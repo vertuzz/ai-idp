@@ -26,6 +26,10 @@ class IsolatedDocumentReader:
         self._settings = settings
 
     def supports(self, media_type: str) -> bool:
+        from ai_idp.domain.media_types import SPREADSHEET_TYPES
+
+        if media_type in SPREADSHEET_TYPES:
+            return True
         return media_type in {
             "application/pdf",
             "image/png",
@@ -49,6 +53,12 @@ class IsolatedDocumentReader:
                     "max_docx_blocks",
                     "max_expanded_mib",
                     "max_image_frames",
+                    "max_spreadsheet_sheets",
+                    "max_spreadsheet_cells",
+                    "max_document_units",
+                    "spreadsheet_rows_per_unit",
+                    "max_unit_text_characters",
+                    "max_document_text_characters",
                 )
             }
             (root / "request.json").write_text(
@@ -96,6 +106,10 @@ class IsolatedDocumentReader:
                 raise MalformedDocumentError("Document decoder terminated without a result.")
             response = json.loads(response_path.read_text(encoding="utf-8"))
             if "error" in response:
+                if response["error"] == "encrypted_document":
+                    from ai_idp.domain.errors import EncryptedDocumentError
+
+                    raise EncryptedDocumentError("Encrypted workbooks require a decrypted copy.")
                 if response["error"] == "document_limit_exceeded":
                     raise DocumentLimitExceededError(response["message"])
                 raise MalformedDocumentError("Document decoding failed; the input is malformed.")

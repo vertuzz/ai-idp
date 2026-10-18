@@ -33,16 +33,30 @@ def detect_media_type(
     if raw_bytes.startswith(b"PK\x03\x04"):
         try:
             with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
+                from ai_idp.domain.media_types import (
+                    XLSB_MIME,
+                    XLSM_MIME,
+                    XLSX_MIME,
+                )
+
+                if "xl/workbook.bin" in zf.namelist():
+                    return XLSB_MIME
+                if "xl/workbook.xml" in zf.namelist():
+                    return XLSM_MIME if "xl/vbaProject.bin" in zf.namelist() else XLSX_MIME
                 if "word/document.xml" in zf.namelist():
                     return DOCX_MIME
         except zipfile.BadZipFile as exc:
             raise UnsupportedMediaTypeError(
                 "Uploaded ZIP archive is corrupted or not a valid DOCX."
             ) from exc
+    if raw_bytes.startswith(bytes.fromhex("d0cf11e0a1b11ae1")):
+        # OLE may contain a BIFF workbook or an encrypted OOXML package. The isolated
+        # reader distinguishes them without opening Office or executing active content.
+        return "application/vnd.ms-excel"
     raise UnsupportedMediaTypeError(
         f"Unsupported or unrecognized file format "
         f"(declared='{declared_media_type}', filename='{filename}'). "
-        "Supported types: PDF, DOCX, PNG, JPEG, TIFF."
+        "Supported types: PDF, DOCX, PNG, JPEG, TIFF, XLSX, XLSM, XLS, XLSB."
     )
 
 

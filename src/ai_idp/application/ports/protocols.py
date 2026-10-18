@@ -80,6 +80,9 @@ class ExtractionBatchResult:
     evidence_by_field: dict[str, list[Evidence]] = field(default_factory=dict)
     model_id: str = ""
     usage: UsageRecord | None = None
+    has_more: bool = False
+    cursor: str = ""
+    record_anchors: list[dict[str, Any]] = field(default_factory=list)
 
 
 class DocumentBlobStore(Protocol):
@@ -178,6 +181,9 @@ class JobRepository(Protocol):
 
 
 class ResultRepository(Protocol):
+    def list_steps(
+        self, job_id: str, prefix: str, *, after: str = "", limit: int = 100
+    ) -> list[tuple[str, dict[str, Any]]]: ...
     def save_evaluation_run(
         self,
         run_id: str,

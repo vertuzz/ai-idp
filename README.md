@@ -41,7 +41,7 @@ uv run --locked python -m ai_idp.evaluation.runner --live --allow-draft --max-to
 
 Python 3.13 is selected through `.python-version`. Original external files remain in ignored `eval/downloads/`. The corpus contains 70 PDFs, 20 DOCX files and 30 receipt PNGs; counterpart images do not count again. See the [120-file catalog](eval/CORPUS.md) and [evaluation setup](eval/README.md).
 
-Apply `alembic upgrade head` to existing databases before starting the updated API/worker. Docker Compose runs migrations before API/worker startup. Model inputs are never silently truncated: extraction uses bounded unit groups and model-led candidate merges, and verification inspects all source batches with complete candidate values. Single-unit, request-size and provider context limits fail explicitly. Absence requires support across every source batch.
+Apply `alembic upgrade head` to existing databases before starting the updated API/worker. Docker Compose runs migrations before API/worker startup. Collection extraction saves bounded output pages and assembles records in application code; it never asks a model to rewrite the entire combined list. Scalar conflicts still use bounded model reconciliation. Verification checks bounded values against original source batches and independently checks collection source counts. Limits and unavailable content remain explicit. See [Excel and paged results](docs/19-spreadsheets-and-paged-results.md).
 
 DOCX blocks retain every embedded image. Unsupported embedded formats such as EMF are exposed as conversion warnings and are not sent as PNG inputs; absence remains unresolved when such images are unavailable. Since an embedded image is not a rendered Word page, the `always_vision` profile preserves semantic text alongside supported images for DOCX. Office-faithful page rendering remains deferred.
 
@@ -97,7 +97,7 @@ history, source text/images and paginated decisions are available for inspection
 | Included in MVP | Explicitly deferred |
 |---|---|
 | HTTP file upload and async extraction jobs | S3 and presigned uploads |
-| PDF, DOCX, PNG, JPEG, TIFF | Office-faithful page rendering |
+| PDF, DOCX, PNG, JPEG, TIFF, XLSX, XLSM, XLS, XLSB | Office-faithful page rendering and formula recalculation |
 | Schema-aware page-batch relevance and modality routing | Classical OCR, Docling, LibreOffice |
 | Dynamic JSON Schema extraction | Fixed industry schemas |
 | Provenance and field verification | Unrestricted autonomous agents |
@@ -125,6 +125,9 @@ Deterministic **mechanical** operations are still required: parsing files, rende
 | [Decisions](docs/11-decisions-and-open-questions.md) | Architectural decisions and unresolved questions |
 | [Operations and release gates](docs/13-operations-and-release.md) | Deployment, limits, schemas, backup/restore, human review and acceptance |
 | [Page-batch validation](docs/16-page-batch-validation.md) | v4 routing contract, offline checks and the 72-file development run |
+| [Excel and bounded-result research plan](docs/18-spreadsheets-and-bounded-results-plan.md) | Parser experiments, Excel scope, generation limits, resumable parts and result pagination |
+| [Excel and paged results](docs/19-spreadsheets-and-paged-results.md) | Formats, parser safety, partition extraction, paging contract and UI |
+
 
 ## Public-project rules
 

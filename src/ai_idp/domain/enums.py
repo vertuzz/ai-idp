@@ -10,6 +10,7 @@ class DocumentStatus(StrEnum):
 
 
 class UnitKind(StrEnum):
+    SPREADSHEET_RANGE = "spreadsheet_range"
     PDF_PAGE = "pdf_page"
     DOCX_BLOCK = "docx_block"
     IMAGE_FRAME = "image_frame"

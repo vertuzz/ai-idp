@@ -13,6 +13,7 @@ import httpx
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
 from pydantic_ai import Agent, BinaryContent, StructuredDict
+from pydantic_ai.exceptions import IncompleteToolCall
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
@@ -21,7 +22,12 @@ from ai_idp.adapters.outbound.openrouter.pricing import estimate_cost_usd
 from ai_idp.adapters.outbound.openrouter.transport import LimitedTransport
 from ai_idp.application.ports.protocols import ExtractionBatchResult, UnitInputPayload
 from ai_idp.domain.enums import Modality
-from ai_idp.domain.errors import PermanentProviderError, ProviderError, RateLimitedError
+from ai_idp.domain.errors import (
+    ModelOutputLimitExceededError,
+    PermanentProviderError,
+    ProviderError,
+    RateLimitedError,
+)
 from ai_idp.domain.models import (
     Evidence,
     ExtractionSpecification,
@@ -218,6 +224,32 @@ class PydanticAIExtractionEngine:
             return ExtractionBatchResult(model_id=model_id)
 
         envelope_schema = build_extraction_envelope_schema(target_fields)
+        if spec.output_page:
+            for f in target_fields:
+                if f.is_array:
+                    node = envelope_schema["properties"][f.name]
+                    node.pop("minItems", None)
+                    node["maxItems"] = spec.output_page["limit"]
+            envelope_schema["properties"].update(
+                {
+                    "_has_more": {"type": "boolean"},
+                    "_cursor": {"type": "string", "maxLength": 1000},
+                    "_records": {
+                        "type": "array",
+                        "maxItems": spec.output_page["limit"],
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "quote": {"type": "string", "minLength": 1, "maxLength": 500},
+                                "occurrence": {"type": "integer", "minimum": 0},
+                            },
+                            "required": ["quote", "occurrence"],
+                            "additionalProperties": False,
+                        },
+                    },
+                }
+            )
+            envelope_schema["required"].extend(["_has_more", "_cursor", "_records"])
         field_lines = [
             f"- {f.path} (name='{f.name}', type={f.field_type}): "
             f"{f.description or 'Extract as written.'}"
@@ -244,6 +276,36 @@ class PydanticAIExtractionEngine:
         user_parts: list[Any] = [
             "Extract the target fields and evidence from the following document unit(s):"
         ]
+        if spec.output_page:
+            user_parts.append(
+                "Return one COMPLETE page of records in source order. "
+                "Never summarize or omit requested records. Return at most the page limit. "
+                "Emit a record only in the unit where that record STARTS; adjacent text is "
+                "context only. Keep equal but distinct source records. Include leaf and "
+                "record evidence. _has_more must be true if additional records remain in "
+                "the owned unit; _cursor must identify the final emitted source record "
+                "using its unit ID and unique row/cell or source text position. "
+                "Continue strictly AFTER the supplied cursor; never repeat earlier records. "
+                "A false _has_more asserts that this owned unit has been fully scanned. "
+                "Pagination request: " + json.dumps(spec.output_page)
+            )
+            system_instructions += (
+                "\nPAGINATED EXTRACTION: Obey the pagination request strictly. The owned text "
+                "may be a suffix of the original unit. Previously processed text has already "
+                "been removed: start at the FIRST complete remaining record. Never skip "
+                "records by slice sequence or search for an absent previous cursor. "
+                "Return one _records anchor for every "
+                "emitted item, in matching order: quote is an exact short substring at the "
+                "START of that original record in the OWNED text (include the cell address "
+                "for workbooks), occurrence is the zero-based occurrence of that quote in "
+                "the owned text. Anchors must be distinct and in source order. Never emit "
+                "a record starting only in context. _has_more concerns only remaining "
+                "owned text, not following context or other pages/sheets. For evidence, "
+                "cite scalar leaves verbatim; do not invent summarized container quotes."
+                " Evidence JSON Pointers use LOCAL zero-based item indices in this "
+                "response, regardless of source row numbers or previous pages: the first "
+                "returned record uses /items/0/... even when its ID is LOT-000031."
+            )
         for payload, modality in unit_inputs:
             u = payload.unit
             loc_str = json.dumps(u.source_locator, ensure_ascii=False)
@@ -253,6 +315,20 @@ class PydanticAIExtractionEngine:
                 f"modality={modality.value}) ---"
             )
             user_parts.append(unit_header)
+            if u.metadata.get("sheet_context"):
+                user_parts.append(
+                    "Sheet context only; emit only records STARTING in the "
+                    "owned unit text below: " + u.metadata["sheet_context"]
+                )
+            if spec.output_page:
+                if payload.prev_excerpt:
+                    user_parts.append(
+                        "Previous context (not owned): " + payload.prev_excerpt[-2000:]
+                    )
+                if payload.next_excerpt:
+                    user_parts.append(
+                        "Following context (not owned): " + payload.next_excerpt[:2000]
+                    )
             if modality in (Modality.TEXT, Modality.TEXT_AND_VISION) and payload.native_text:
                 user_parts.append(f"Unit Text ({u.unit_id}):\n{payload.native_text}")
             elif modality == Modality.TEXT and not payload.native_text:
@@ -297,6 +373,10 @@ class PydanticAIExtractionEngine:
                     matched_path = raw_path
                     evidence_by_field.setdefault(matched_path, [])
             if matched_path is None:
+                if any(raw_path.startswith(f.path + "/") for f in target_fields):
+                    matched_path = raw_path
+                    evidence_by_field.setdefault(matched_path, [])
+            if matched_path is None:
                 continue
             uid = str(item.get("unit_id") or "").strip()
             quote = item.get("quote")
@@ -310,8 +390,10 @@ class PydanticAIExtractionEngine:
             ):
                 try:
                     span_obj = TextSpan(
-                        start=int(text_span_dict["start"]),
-                        end=int(text_span_dict["end"]),
+                        start=int(text_span_dict["start"])
+                        + int((spec.output_page or {}).get("source_text_start", 0)),
+                        end=int(text_span_dict["end"])
+                        + int((spec.output_page or {}).get("source_text_start", 0)),
                     )
                 except (ValueError, TypeError):
                     span_obj = None
@@ -331,6 +413,9 @@ class PydanticAIExtractionEngine:
             evidence_by_field=evidence_by_field,
             model_id=model_id,
             usage=usage_record,
+            has_more=output_dict.get("_has_more", False),
+            cursor=output_dict.get("_cursor", ""),
+            record_anchors=output_dict.get("_records", []),
         )
 
     async def run_structured(
@@ -361,7 +446,7 @@ class PydanticAIExtractionEngine:
                 description="Structured model output matching the requested schema.",
             ),
             system_prompt=system_instructions,
-            retries=self._max_retries,
+            retries=0,
             model_settings=ModelSettings(temperature=0.0, max_tokens=self._max_output_tokens),
         )
 
@@ -369,6 +454,12 @@ class PydanticAIExtractionEngine:
             t0 = time.perf_counter()
             try:
                 run_result = await agent.run(user_parts)
+                if run_result.response.finish_reason == "length":
+                    raise ModelOutputLimitExceededError("Model output reached its token ceiling.")
+            except IncompleteToolCall as exc:
+                raise ModelOutputLimitExceededError(
+                    "Model returned an incomplete output page."
+                ) from exc
             except Exception as exc:
                 cause = exc
                 while cause is not None:
