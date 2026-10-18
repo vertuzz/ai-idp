@@ -33,6 +33,45 @@ def _table_to_markdown(table_tag: Tag) -> str:
     return "\n".join(lines)
 
 
+def _safe_preview_html(html: str) -> str:
+    """Allow semantic formatting only; no links, source URLs, styles or active content."""
+    soup = BeautifulSoup(html, "html.parser")
+    allowed = {
+        "p",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+        "strong",
+        "em",
+        "b",
+        "i",
+        "u",
+        "ul",
+        "ol",
+        "li",
+        "br",
+    }
+    for tag in list(soup.find_all(True)):
+        if tag.name is None:
+            continue
+        if tag.name in {"script", "style", "iframe", "object", "embed", "svg", "math"}:
+            tag.decompose()
+        elif tag.name not in allowed:
+            tag.unwrap()
+        else:
+            tag.attrs = {}
+    return str(soup)
+
+
 class MammothDocxDocumentReader:
     """Normalizes DOCX files into semantic DocumentUnit blocks using Mammoth."""
 
@@ -225,6 +264,9 @@ class MammothDocxDocumentReader:
                 blob_store.put_text(text_key, text_content)
                 text_ref = text_key
 
+            html_key = f"artifacts/{document.document_id}/preview/{unit_id}.html"
+            blob_store.put_text(html_key, _safe_preview_html(blk["html"]))
+
             blk_images: list[str] = blk["images"]
             supported_images = [name for name in blk_images if name not in unavailable_images]
             primary_image_name = supported_images[0] if supported_images else None
@@ -247,6 +289,7 @@ class MammothDocxDocumentReader:
                     image_ref=image_ref,
                     image_refs=[embedded_images[name] for name in dict.fromkeys(supported_images)],
                     metadata={
+                        "semantic_html_ref": html_key,
                         "heading": blk["heading"],
                         "table_count": blk["table_count"],
                         "embedded_images": blk_images,

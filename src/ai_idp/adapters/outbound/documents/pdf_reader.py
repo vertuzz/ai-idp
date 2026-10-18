@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 
 import pymupdf
@@ -75,6 +77,45 @@ class PyMuPdfDocumentReader:
                 image_key = f"artifacts/{document.document_id}/render/{unit_id}.png"
                 blob_store.put_bytes(image_key, png_bytes)
 
+                # Map only complete words found in canonical text, preserving offsets.
+                # PDF word coordinates are unrotated; page previews include rotation.
+                words = []
+                cursor = 0
+                for word in page.get_text("words"):
+                    start = clean_text.find(word[4], cursor)
+                    if start < 0:
+                        continue
+                    if clean_text[cursor:start].strip():
+                        # Do not align a word to a later repetition after a text mismatch.
+                        break
+                    end = start + len(word[4])
+                    cursor = end
+                    box = pymupdf.Rect(word[:4]) * page.rotation_matrix
+                    words.append(
+                        {
+                            "start": start,
+                            "end": end,
+                            "rect": [
+                                max(0.0, min(1.0, box.x0 / rect.width)),
+                                max(0.0, min(1.0, box.y0 / rect.height)),
+                                max(0.0, min(1.0, box.x1 / rect.width)),
+                                max(0.0, min(1.0, box.y1 / rect.height)),
+                            ],
+                        }
+                    )
+                geometry_key = f"artifacts/{document.document_id}/geometry/{unit_id}.json"
+                blob_store.put_text(
+                    geometry_key,
+                    json.dumps(
+                        {
+                            "version": 1,
+                            "text_sha256": hashlib.sha256(clean_text.encode("utf-8")).hexdigest(),
+                            "image_sha256": hashlib.sha256(png_bytes).hexdigest(),
+                            "words": words,
+                        }
+                    ),
+                )
+
                 image_list = page.get_images(full=False)
                 units.append(
                     DocumentUnit(
@@ -86,6 +127,7 @@ class PyMuPdfDocumentReader:
                         native_text_ref=text_ref,
                         image_ref=image_key,
                         metadata={
+                            "text_geometry_ref": geometry_key,
                             "width_points": width_pt,
                             "height_points": height_pt,
                             "rendered_width_px": pix.width,

@@ -35,6 +35,7 @@ The example shows references, not inline raw document content. Optional fields a
 - Read page count, page dimensions, text and text blocks when directly available.
 - Render a preview image for each page at configurable resolution; preserve original page ID/number.
 - Store text and image as separate derived artifacts, enabling decision engines to see either or both.
+- Store a versioned word-geometry artifact mapped conservatively to the unchanged canonical text. Positions are transformed to normalized display-image coordinates after crop/rotation; missing or ambiguous anchoring falls back to the cited page. Preview geometry does not change relevance, modality or verification.
 - Do not interpret missing/short native text as a deterministic decision to run an OCR or vision path.
 - Expose PDF text as imperfect evidence: extraction may lose reading order, table associations, and text hidden in images.
 - Support configurable lazy rendering/caching if full upfront rendering becomes expensive.
@@ -45,6 +46,7 @@ Mammoth converts the DOCX to **semantic HTML**, not a pixel-accurate Word layout
 
 - Split into bounded logical units at headings, table boundaries, or size limits, carrying brief adjacent context for continuity.
 - Preserve HTML/table structure where useful; sanitize HTML when rendering it or exposing it to consumers.
+- Persist an allowlisted, attribute-free semantic HTML artifact per block for the customer preview. It excludes active content, links, external resources and inline images; embedded images remain available separately through authorized source endpoints. Older units without this artifact use canonical text.
 - Track embedded images as referenced artifacts; attach them to relevant blocks where possible.
 - A block's `image_refs` contains every embedded image, with `image_ref` retained as the primary-image compatibility field. All images are loaded into model input; multi-image blocks cite the semantic block rather than falsely attributing the whole block to its first image. Existing stored DOCX units recover their image list from saved metadata.
 - A DOCX block does not have a reliable physical page number. Return block IDs/heading positions instead.

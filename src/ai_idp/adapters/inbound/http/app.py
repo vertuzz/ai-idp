@@ -28,6 +28,7 @@ from ai_idp.adapters.inbound.http.schemas import (
     JobStatusResponse,
     JobUsageResponse,
 )
+from ai_idp.adapters.inbound.http.source_preview import router as source_preview_router
 from ai_idp.adapters.inbound.http.telemetry import RequestTelemetryMiddleware
 from ai_idp.domain.errors import AuthenticationError, DomainError, UploadTooLargeError
 
@@ -114,6 +115,7 @@ def create_app(
         list(v1_dependencies) if v1_dependencies is not None else [Depends(require_api_key)]
     )
     v1 = APIRouter(prefix="/v1", dependencies=router_dependencies)
+    v1.include_router(source_preview_router)
 
     @v1.post("/documents", status_code=201, response_model=DocumentUploadResponse)
     async def upload_document(

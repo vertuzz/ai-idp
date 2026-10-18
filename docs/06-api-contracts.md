@@ -136,6 +136,8 @@ Scores above are fabricated examples for API illustration, not actual model meas
 - GET /v1/documents/{document_id}/units — paginated source-unit metadata.
 - GET /v1/documents/{document_id}/units/{unit_id}/text — source text.
 - GET /v1/documents/{document_id}/units/{unit_id}/images/{image_index} — source image, zero-based index.
+- GET /v1/documents/{document_id}/units/{unit_id}/preview — canonical text/hash and optional sanitized semantic DOCX HTML; legacy units fall back to text.
+- POST /v1/documents/{document_id}/units/{unit_id}/location — resolve a cited quote or canonical `start`/`end` span, with optional `artifact_sha256`, to native-PDF display regions. Returns `exact`, `ambiguous`, `unit_only` or `unavailable`, independently of field verification. Regions use normalized top-left display-image coordinates; responses identify text/image hashes. The original document is never modified and no model is called.
 
 Decision pagination uses `offset` and `limit` (1–1,000), with `next_offset` or null.
 Job status includes the effective configuration. Results include `schema_errors` and
