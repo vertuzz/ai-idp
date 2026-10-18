@@ -137,14 +137,80 @@ def classify_field_comparison(
         if c_ext == c_exp:
             return False, False, True, "representation_only_difference"
 
-        # Check prefix/suffix differences (e.g. 'Volume 3' vs '3', 'Jan. 16, 2018' vs 'Jan.16,2018')
-        if (
-            c_ext.endswith(c_exp)
-            or c_exp.endswith(c_ext)
-            or c_ext.startswith(c_exp)
-            or c_exp.startswith(c_ext)
-        ):
-            return False, False, True, "incomplete_or_extra_content"
+        # Check prefix/suffix differences (e.g. 'Volume 3' vs '3')
+        # Numbers must NEVER be matched via prefix/suffix substrings (e.g. '1000' vs '100')
+        is_num_ext = bool(re.fullmatch(r"[-+]?\d+(?:[.,]\d+)*", c_ext))
+        is_num_exp = bool(re.fullmatch(r"[-+]?\d+(?:[.,]\d+)*", c_exp))
+        if is_num_ext and is_num_exp:
+            return False, False, False, "wrong_value"
+
+        # Differences must respect word boundaries, and must NOT match antonyms/negations
+        # e.g. 'inactive' vs 'active', 'not active' vs 'active'
+        words_ext = c_ext.split()
+        words_exp = c_exp.split()
+
+        negation_words = {
+            "not",
+            "no",
+            "non",
+            "never",
+            "without",
+            "inactive",
+            "unactive",
+            "disabled",
+            "off",
+            "on",
+            "active",
+            "false",
+            "true",
+        }
+        neg_ext = set(words_ext).intersection(negation_words)
+        neg_exp = set(words_exp).intersection(negation_words)
+        if neg_ext != neg_exp:
+            return False, False, False, "wrong_value"
+
+        # Check if one is a sub-phrase of the other with only boilerplate/label difference
+        if len(words_ext) > len(words_exp):
+            longer, shorter = words_ext, words_exp
+        else:
+            longer, shorter = words_exp, words_ext
+
+        shorter_len = len(shorter)
+        if shorter_len > 0:
+            is_prefix = longer[:shorter_len] == shorter
+            is_suffix = longer[-shorter_len:] == shorter
+            if is_prefix or is_suffix:
+                extra_words = set(longer[shorter_len:] if is_prefix else longer[:-shorter_len])
+                boilerplate = {
+                    "volume",
+                    "vol",
+                    "invoice",
+                    "inv",
+                    "total",
+                    "page",
+                    "pg",
+                    "no",
+                    "num",
+                    "number",
+                    "item",
+                    "usd",
+                    "eur",
+                    "gbp",
+                    "rub",
+                    "$",
+                    "€",
+                    "£",
+                    "qty",
+                    "amount",
+                    "subtotal",
+                    "date",
+                    "id",
+                    "ref",
+                    "#",
+                }
+                if extra_words.issubset(boilerplate):
+                    return False, False, True, "incomplete_or_extra_content"
+                return False, False, False, "incomplete_or_extra_content"
 
     return False, False, False, "wrong_value"
 

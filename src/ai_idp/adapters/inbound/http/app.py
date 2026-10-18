@@ -329,6 +329,7 @@ def create_app(
                         unit_id=ev.unit_id,
                         locator=ev.locator,
                         quote=ev.quote,
+                        raw_value=ev.raw_value,
                         bounding_box=ev.bounding_box,
                         text_span=ev.text_span.model_dump(mode="json") if ev.text_span else None,
                     )

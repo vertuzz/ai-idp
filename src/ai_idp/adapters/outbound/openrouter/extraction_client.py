@@ -26,6 +26,7 @@ from ai_idp.domain.models import (
     Evidence,
     ExtractionSpecification,
     TargetFieldSpec,
+    TextSpan,
     UsageRecord,
 )
 
@@ -83,6 +84,23 @@ def build_extraction_envelope_schema(target_fields: list[TargetFieldSpec]) -> di
                     "description": (
                         "Short verbatim excerpt from the source unit supporting the value."
                     ),
+                },
+                "raw_value": {
+                    "type": ["string", "null"],
+                    "description": (
+                        "Exact unnormalized raw string representation as printed in the unit, "
+                        "e.g. '$1,200.00' or 'Nov 5, 2024'."
+                    ),
+                },
+                "text_span": {
+                    "type": ["object", "null"],
+                    "description": "Character offsets [start, end] in native unit text if known.",
+                    "properties": {
+                        "start": {"type": "integer"},
+                        "end": {"type": "integer"},
+                    },
+                    "required": ["start", "end"],
+                    "additionalProperties": False,
                 },
             },
             "required": ["field_path", "unit_id", "quote"],
@@ -282,11 +300,29 @@ class PydanticAIExtractionEngine:
                 continue
             uid = str(item.get("unit_id") or "").strip()
             quote = item.get("quote")
+            raw_val_str = item.get("raw_value")
+            text_span_dict = item.get("text_span")
+            span_obj = None
+            if (
+                isinstance(text_span_dict, dict)
+                and "start" in text_span_dict
+                and "end" in text_span_dict
+            ):
+                try:
+                    span_obj = TextSpan(
+                        start=int(text_span_dict["start"]),
+                        end=int(text_span_dict["end"]),
+                    )
+                except (ValueError, TypeError):
+                    span_obj = None
+
             evidence_by_field[matched_path].append(
                 Evidence(
                     unit_id=uid,
                     locator={},
                     quote=str(quote) if quote is not None else None,
+                    raw_value=str(raw_val_str) if raw_val_str is not None else None,
+                    text_span=span_obj,
                 )
             )
 

@@ -120,6 +120,7 @@ class Evidence(BaseModel):
     unit_id: str
     locator: dict[str, Any] = Field(default_factory=dict)
     quote: str | None = None
+    raw_value: str | None = None
     bounding_box: dict[str, Any] | None = None
     text_span: TextSpan | None = None
 

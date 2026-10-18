@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
@@ -67,6 +68,7 @@ from ai_idp.domain.models import (
     JobProgress,
     PipelineConfiguration,
     TargetFieldSpec,
+    TextSpan,
     UsageRecord,
     VerificationOutcome,
 )
@@ -640,26 +642,36 @@ class ExtractionPipelineService:
                     extraction_batch.evidence_by_field.get(field_spec.path, []),
                     unit_by_id=unit_by_id,
                     default_unit_ids=selected_unit_ids,
+                    payload_by_id=payload_by_id,
                 )
+                raw_val_str = None
+                if evidences:
+                    raw_val_str = evidences[0].raw_value or evidences[0].quote
+
+                fv = FieldValue(
+                    path=field_spec.path,
+                    value=raw_val,
+                    raw_value=raw_val_str,
+                    status=FieldStatus.UNVERIFIED,
+                    sources=evidences,
+                    attempt_count=1,
+                )
+                self._run_mechanical_checks(fv, field_spec, payload_by_id)
+
                 attempt = FieldCandidateAttempt(
                     field_path=field_spec.path,
                     attempt_number=1,
                     value=raw_val,
+                    raw_value=raw_val_str,
                     sources=evidences,
                     model_id=config.extraction_model,
                     modality=selected_inputs[0][1] if len(selected_inputs) == 1 else None,
                     status="completed",
+                    check_results=list(fv.check_results),
                 )
                 self._result_repo.record_field_attempt(job_id, attempt)
-
-                field_values[field_spec.path] = FieldValue(
-                    path=field_spec.path,
-                    value=raw_val,
-                    status=FieldStatus.UNVERIFIED,
-                    sources=evidences,
-                    attempt_count=1,
-                    attempts=[attempt],
-                )
+                fv.attempts = [attempt]
+                field_values[field_spec.path] = fv
 
             if check_cancelled():
                 return self._build_cancelled_result(job_id, spec)
@@ -736,23 +748,30 @@ class ExtractionPipelineService:
                     extraction_batch.evidence_by_field.get(target.path, root.sources),
                     unit_by_id=unit_by_id,
                     default_unit_ids=list(payload_by_id),
+                    payload_by_id=payload_by_id,
                 )
+                raw_val_str = sources[0].raw_value or sources[0].quote if sources else None
+                fv_leaf = FieldValue(
+                    path=target.path,
+                    value=value,
+                    raw_value=raw_val_str,
+                    status=FieldStatus.UNVERIFIED,
+                    sources=sources,
+                    attempt_count=1,
+                )
+                self._run_mechanical_checks(fv_leaf, target, payload_by_id)
                 attempt = FieldCandidateAttempt(
                     field_path=target.path,
                     attempt_number=1,
                     value=value,
+                    raw_value=raw_val_str,
                     sources=sources,
                     model_id=root.attempts[-1].model_id,
+                    check_results=list(fv_leaf.check_results),
                 )
                 self._result_repo.record_field_attempt(job_id, attempt)
-                field_values[target.path] = FieldValue(
-                    path=target.path,
-                    value=value,
-                    status=FieldStatus.UNVERIFIED,
-                    sources=sources,
-                    attempts=[attempt],
-                    attempt_count=1,
-                )
+                fv_leaf.attempts = [attempt]
+                field_values[target.path] = fv_leaf
             if nested and should_verify:
                 nested_spec = spec.model_copy(update={"fields": nested})
                 await self._verify_fields(
@@ -789,13 +808,16 @@ class ExtractionPipelineService:
                     _, reconciled = get_pointer(assembled, target.path)
                     if fv.value != reconciled:
                         fv.value = reconciled
+                        self._run_mechanical_checks(fv, target, payload_by_id)
                         attempt = FieldCandidateAttempt(
                             field_path=target.path,
                             attempt_number=fv.attempt_count + 1,
                             value=reconciled,
+                            raw_value=fv.raw_value,
                             sources=fv.sources,
                             model_id=config.escalation_model,
                             status="reconciled",
+                            check_results=list(fv.check_results),
                         )
                         self._result_repo.record_field_attempt(job_id, attempt)
                         fv.attempts.append(attempt)
@@ -1111,24 +1133,36 @@ class ExtractionPipelineService:
         key_prefix: str = "",
     ) -> None:
         config = job.configuration
-        rich_inputs: list[tuple[UnitInputPayload, Modality]] = []
-        for uid in payload_by_id:
-            payload = payload_by_id[uid]
-            avail = payload.unit.available_modalities
-            if Modality.TEXT_AND_VISION in avail:
-                mod = Modality.TEXT_AND_VISION
-            elif Modality.VISION in avail:
-                mod = Modality.VISION
-            else:
-                mod = Modality.TEXT
-            rich_inputs.append((payload, mod))
-
         remaining = list(fields_to_escalate)
         for extra_idx in range(1, config.max_field_extra_attempts + 1):
             if not remaining:
                 break
             attempt_num = 1 + extra_idx
             model_to_use = config.escalation_model
+
+            # Targeted units: on attempt 1, start strictly with the problematic page(s)
+            # cited by the remaining fields. If not cited or after attempt 1, expand to all units.
+            cited_uids: list[str] = []
+            for f in remaining:
+                fv = field_values[f.path]
+                for ev in fv.sources:
+                    if ev.unit_id in payload_by_id and ev.unit_id not in cited_uids:
+                        cited_uids.append(ev.unit_id)
+
+            target_uids = cited_uids if (cited_uids and extra_idx == 1) else list(payload_by_id)
+
+            rich_inputs: list[tuple[UnitInputPayload, Modality]] = []
+            for uid in target_uids:
+                payload = payload_by_id[uid]
+                avail = payload.unit.available_modalities
+                if Modality.TEXT_AND_VISION in avail:
+                    mod = Modality.TEXT_AND_VISION
+                elif Modality.VISION in avail:
+                    mod = Modality.VISION
+                else:
+                    mod = Modality.TEXT
+                rich_inputs.append((payload, mod))
+
             # Targeted context: pass failure reason in field description
             targeted_fields = []
             for f in remaining:
@@ -1144,6 +1178,7 @@ class ExtractionPipelineService:
                     "attempt_number": attempt_num,
                     "model_id": model_to_use,
                     "fields_count": len(remaining),
+                    "units_count": len(rich_inputs),
                 },
             ):
                 esc_batch = await self._extract_bounded(
@@ -1164,24 +1199,30 @@ class ExtractionPipelineService:
                     new_evidences = self._normalize_evidences(
                         esc_batch.evidence_by_field.get(f_spec.path, []),
                         unit_by_id=unit_by_id,
-                        default_unit_ids=list(payload_by_id),
+                        default_unit_ids=target_uids,
+                        payload_by_id=payload_by_id,
                     )
-                    attempt = FieldCandidateAttempt(
-                        field_path=f_spec.path,
-                        attempt_number=attempt_num,
-                        value=new_val,
-                        sources=new_evidences,
-                        model_id=model_to_use,
-                        status="completed",
-                    )
-                    fv.attempts.append(attempt)
-                    fv.attempt_count = len(fv.attempts)
+                    raw_val_str = None
+                    if new_evidences:
+                        raw_val_str = new_evidences[0].raw_value or new_evidences[0].quote
+                    fv.raw_value = raw_val_str
                     fv.verification = None
                     fv.raw_probabilities = {}
                     fv.value = new_val
                     fv.sources = new_evidences
                     self._run_mechanical_checks(fv, f_spec, payload_by_id)
-                    attempt.check_results = list(fv.check_results)
+                    attempt = FieldCandidateAttempt(
+                        field_path=f_spec.path,
+                        attempt_number=attempt_num,
+                        value=new_val,
+                        raw_value=raw_val_str,
+                        sources=new_evidences,
+                        model_id=model_to_use,
+                        status="completed",
+                        check_results=list(fv.check_results),
+                    )
+                    fv.attempts.append(attempt)
+                    fv.attempt_count = len(fv.attempts)
                     self._result_repo.record_field_attempt(job.job_id, attempt)
                     verify_subset.append((f_spec, new_val, new_evidences))
 
@@ -1262,23 +1303,31 @@ class ExtractionPipelineService:
                     cov_batch.evidence_by_field.get(f_spec.path, []),
                     unit_by_id=unit_by_id,
                     default_unit_ids=review_unit_ids,
+                    payload_by_id=payload_by_id,
                 )
+                raw_val_str = None
+                if evidences:
+                    raw_val_str = evidences[0].raw_value or evidences[0].quote
                 attempt_num = fv.attempt_count + 1
-                attempt = FieldCandidateAttempt(
-                    field_path=f_spec.path,
-                    attempt_number=attempt_num,
-                    value=new_val,
-                    sources=evidences,
-                    model_id=config.extraction_model,
-                    status="completed",
-                )
-                self._result_repo.record_field_attempt(job.job_id, attempt)
-                fv.attempts.append(attempt)
-                fv.attempt_count = len(fv.attempts)
+                fv.raw_value = raw_val_str
                 fv.verification = None
                 fv.raw_probabilities = {}
                 fv.value = new_val
                 fv.sources = evidences
+                self._run_mechanical_checks(fv, f_spec, payload_by_id)
+                attempt = FieldCandidateAttempt(
+                    field_path=f_spec.path,
+                    attempt_number=attempt_num,
+                    value=new_val,
+                    raw_value=raw_val_str,
+                    sources=evidences,
+                    model_id=config.extraction_model,
+                    status="completed",
+                    check_results=list(fv.check_results),
+                )
+                self._result_repo.record_field_attempt(job.job_id, attempt)
+                fv.attempts.append(attempt)
+                fv.attempt_count = len(fv.attempts)
                 newly_populated.append((f_spec, new_val, evidences))
 
             if should_verify and newly_populated:
@@ -1293,6 +1342,13 @@ class ExtractionPipelineService:
                 record_usage(ver_res.usage)
                 for f_path, outcome in ver_res.outcomes.items():
                     self._apply_verification(field_values[f_path], outcome, config)
+            elif not should_verify and newly_populated:
+                for f_spec, _, _ in newly_populated:
+                    fv = field_values[f_spec.path]
+                    failed = [c for c in fv.check_results if c.outcome == CheckOutcome.FAIL]
+                    if failed:
+                        reasons = ", ".join(c.reason_code for c in failed)
+                        fv.unresolved_reason = f"Mechanical check failed: {reasons}"
 
     @staticmethod
     def _run_mechanical_checks(
@@ -1380,6 +1436,7 @@ class ExtractionPipelineService:
         *,
         unit_by_id: dict[str, DocumentUnit],
         default_unit_ids: list[str],
+        payload_by_id: dict[str, UnitInputPayload] | None = None,
     ) -> list[Evidence]:
         normalized: list[Evidence] = []
         for ev in evidences:
@@ -1389,12 +1446,30 @@ class ExtractionPipelineService:
                 continue
             locator = dict(ev.locator)
             locator.update(unit.source_locator)
+            span = ev.text_span
+            target_str = ev.raw_value or ev.quote
+            if span is None and target_str and payload_by_id and uid in payload_by_id:
+                native_text = payload_by_id[uid].native_text
+                if native_text:
+                    clean = target_str.strip()
+                    matches = [m.span() for m in re.finditer(re.escape(clean), native_text)]
+                    if len(matches) == 1:
+                        h = hashlib.sha256(native_text.encode("utf-8")).hexdigest()
+                        span = TextSpan(
+                            start=matches[0][0],
+                            end=matches[0][1],
+                            text=clean,
+                            artifact_ref=uid,
+                            artifact_sha256=h,
+                        )
             normalized.append(
                 Evidence(
                     unit_id=uid,
                     locator=locator,
                     quote=ev.quote,
+                    raw_value=ev.raw_value,
                     bounding_box=ev.bounding_box,
+                    text_span=span,
                 )
             )
         return normalized

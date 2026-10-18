@@ -87,6 +87,7 @@ class EvidenceItemResponse(BaseModel):
     unit_id: str
     locator: dict[str, Any]
     quote: str | None = None
+    raw_value: str | None = None
     bounding_box: dict[str, Any] | None = None
     text_span: dict[str, Any] | None = None
 

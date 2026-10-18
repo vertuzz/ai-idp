@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+from ai_idp.application.ports.protocols import UnitInputPayload
 from ai_idp.application.services.pipeline import ExtractionPipelineService
 from ai_idp.domain.enums import (
     CheckOutcome,
@@ -12,6 +11,7 @@ from ai_idp.domain.models import (
     CheckResult,
     DocumentUnit,
     Evidence,
+    ExtractionSpecification,
     FieldValue,
     PipelineConfiguration,
     TargetFieldSpec,
@@ -128,13 +128,30 @@ def test_4_period_requires_semantic_check():
 
 def test_5_item_name_contains_copied_quantity_price():
     """5. Item name contains copied quantity/price; quantity missing: association failure."""
+    # Proven structural violation when item_fields shows quantity missing/merged
     assoc_res = validate_field_association(
         field_name="item_name",
         field_value="RTD Kunyit 1 15000",
+        item_fields={"quantity": None, "price": 15000},
     )
     fails = [r for r in assoc_res if r.outcome == CheckOutcome.FAIL]
     assert len(fails) == 1
     assert fails[0].reason_code == "MERGED_ITEM_FIELDS"
+
+    # Without proven structure, it is a signal (INDETERMINATE), not a hard FAIL veto
+    suspect_res = validate_field_association(
+        field_name="item_name",
+        field_value="RTD Kunyit 1 15000",
+    )
+    assert any(r.outcome == CheckOutcome.INDETERMINATE for r in suspect_res)
+    assert not any(r.outcome == CheckOutcome.FAIL for r in suspect_res)
+
+    # Legitimate product name with numbers and units is not failed
+    ok_res = validate_field_association(
+        field_name="item_name",
+        field_value="iPhone 16 Pro 256 GB",
+    )
+    assert not any(r.outcome == CheckOutcome.FAIL for r in ok_res)
 
 
 def test_6_table_values_association_and_completeness():
@@ -318,3 +335,264 @@ def test_16_model_approval_cannot_override_mechanical_failure():
     # Must be demoted to INSUFFICIENT_EVIDENCE because mechanical check failed
     assert fv.verification == VerificationStatus.INSUFFICIENT_EVIDENCE
     assert "Mechanical check failed" in (fv.unresolved_reason or "")
+
+
+def test_17_coverage_recovery_runs_mechanical_checks_and_catches_fake_quote():
+    """17. Recovery re-extraction cannot bypass mechanical checks with fabricated quote."""
+    unit = _make_unit("page_1", modalities=[Modality.TEXT])
+    fake_ev = Evidence(unit_id="page_1", quote="Nonexistent fabricated quote 9999")
+    fv = FieldValue(
+        path="/total",
+        value=9999,
+        status=FieldStatus.UNVERIFIED,
+        sources=[fake_ev],
+    )
+    spec = TargetFieldSpec(path="/total", name="total", field_type="integer")
+    payload = UnitInputPayload(unit=unit, native_text="Document has Total: 1,200 USD")
+
+    ExtractionPipelineService._run_mechanical_checks(fv, spec, {"page_1": payload})
+    fails = [c for c in fv.check_results if c.outcome == CheckOutcome.FAIL]
+    assert len(fails) > 0
+    assert any(c.reason_code == "TEXT_NOT_FOUND" for c in fails)
+
+    # Verification must be gated by the failed check
+    outcome = VerificationOutcome(
+        field_path="/total",
+        status=VerificationStatus.SUPPORTED,
+        raw_probabilities={"SUPPORTED": 0.99},
+        model_id="test",
+    )
+    config = PipelineConfiguration()
+    ExtractionPipelineService._apply_verification(fv, outcome, config)
+    assert fv.verification == VerificationStatus.INSUFFICIENT_EVIDENCE
+
+
+def test_18_quote_containing_multiple_numbers_matches_candidate_value():
+    """18. Multi-number quotes (e.g. 'Total for 2025: 1,200') do not smash digits together."""
+    spec = TargetFieldSpec(path="/total", name="total", field_type="integer")
+    # Candidate value 1200 in "Total for 2025: 1,200" must succeed
+    checks = validate_typed_value(value=1200, raw_text="Total for 2025: 1,200", field_spec=spec)
+    assert any(
+        c.outcome == CheckOutcome.PASS and c.reason_code == "NUMERIC_VALUE_EXACT" for c in checks
+    )
+    assert not any(c.outcome == CheckOutcome.FAIL for c in checks)
+
+    # Candidate value 2025 also matches if extracting year
+    checks_yr = validate_typed_value(value=2025, raw_text="Total for 2025: 1,200", field_spec=spec)
+    assert any(c.outcome == CheckOutcome.PASS for c in checks_yr)
+
+    # But candidate 1300 fails against "Total for 2025: 1,200"
+    checks_mismatch = validate_typed_value(
+        value=1300, raw_text="Total for 2025: 1,200", field_spec=spec
+    )
+    assert any(
+        c.outcome == CheckOutcome.FAIL and c.reason_code == "NUMERIC_VALUE_MISMATCH"
+        for c in checks_mismatch
+    )
+
+
+def test_19_product_name_with_numbers_and_units_not_vetoed():
+    """19. Legitimate names with numbers like 'iPhone 16 Pro 256 GB' do not get hard FAIL."""
+    results = validate_field_association(
+        field_name="product_name",
+        field_value="iPhone 16 Pro 256 GB",
+    )
+    assert not any(r.outcome == CheckOutcome.FAIL for r in results)
+
+
+def test_20_numeric_token_boundary_prevents_loss_of_sign_and_fraction():
+    """20. Source search for 100 must not match -100 or 100.50."""
+    unit = _make_unit("page_1", modalities=[Modality.TEXT])
+    ev_100 = Evidence(unit_id="page_1", quote="100")
+
+    # Native text has -100: searching 100 must fail
+    res_neg = validate_source_anchoring(
+        unit=unit,
+        native_text="Balance is -100 USD",
+        evidence=ev_100,
+        raw_or_quote="100",
+    )
+    assert res_neg.outcome == CheckOutcome.FAIL
+
+    # Native text has 100.50: searching 100 must fail
+    res_frac = validate_source_anchoring(
+        unit=unit,
+        native_text="Balance is 100.50 USD",
+        evidence=ev_100,
+        raw_or_quote="100",
+    )
+    assert res_frac.outcome == CheckOutcome.FAIL
+
+    # Searching exact -100 in -100 USD must pass
+    ev_neg = Evidence(unit_id="page_1", quote="-100")
+    res_ok_neg = validate_source_anchoring(
+        unit=unit,
+        native_text="Balance is -100 USD",
+        evidence=ev_neg,
+        raw_or_quote="-100",
+    )
+    assert res_ok_neg.outcome == CheckOutcome.PASS
+
+    # Searching exact 100.50 in 100.50 USD must pass
+    ev_frac = Evidence(unit_id="page_1", quote="100.50")
+    res_ok_frac = validate_source_anchoring(
+        unit=unit,
+        native_text="Balance is 100.50 USD",
+        evidence=ev_frac,
+        raw_or_quote="100.50",
+    )
+    assert res_ok_frac.outcome == CheckOutcome.PASS
+
+
+def test_21_metrics_classification_avoids_false_semantic_match():
+    """21. classify_field_comparison rejects numbers (1000 vs 100)
+    and antonyms (inactive vs active)."""
+    from ai_idp.evaluation.metrics import classify_field_comparison
+
+    # 1000 vs 100: must be wrong_value, NOT semantic match
+    _, _, sem_num, cat_num = classify_field_comparison(extracted="1000", expected="100")
+    assert sem_num is False
+    assert cat_num == "wrong_value"
+
+    # inactive vs active: must be wrong_value, NOT semantic match
+    _, _, sem_ant, cat_ant = classify_field_comparison(extracted="inactive", expected="active")
+    assert sem_ant is False
+    assert cat_ant == "wrong_value"
+
+    # Volume 3 vs 3: genuine boilerplate label difference is semantic match
+    _, _, sem_vol, cat_vol = classify_field_comparison(extracted="Volume 3", expected="3")
+    assert sem_vol is True
+    assert cat_vol == "incomplete_or_extra_content"
+
+
+def test_22_normalize_evidences_anchors_text_span_and_hash():
+    """22. _normalize_evidences preserves text_span and computes SHA256 when unique quote exists."""
+    unit = _make_unit("page_1", modalities=[Modality.TEXT])
+    payload = UnitInputPayload(unit=unit, native_text="Sample header\nInvoice # 12345\nFooter text")
+    ev = Evidence(unit_id="page_1", quote="Invoice # 12345")
+
+    norm_evs = ExtractionPipelineService._normalize_evidences(
+        [ev],
+        unit_by_id={"page_1": unit},
+        default_unit_ids=["page_1"],
+        payload_by_id={"page_1": payload},
+    )
+    assert len(norm_evs) == 1
+    assert norm_evs[0].text_span is not None
+    assert norm_evs[0].text_span.start == 14
+    assert norm_evs[0].text_span.end == 29
+    assert norm_evs[0].text_span.text == "Invoice # 12345"
+    assert norm_evs[0].text_span.artifact_sha256 is not None
+
+
+async def test_23_escalation_targets_cited_problematic_units_on_first_attempt():
+    """23. Escalation starts with the problematic cited page rather than entire document."""
+    from ai_idp.application.ports.protocols import ExtractionBatchResult
+    from ai_idp.domain.models import ExtractionRun
+
+    extracted_units_passed: list[list[str]] = []
+
+    class MockExtractor:
+        async def extract_fields(self, **kwargs):
+            unit_inputs = kwargs.get("unit_inputs", [])
+            extracted_units_passed.append([p.unit.unit_id for p, _ in unit_inputs])
+            return ExtractionBatchResult(
+                data={"total": 1200},
+                evidence_by_field={"/total": [Evidence(unit_id="page_3", quote="Total: 1,200")]},
+                model_id="escalation_model",
+            )
+
+    class MockDecisionEngine:
+        async def verify_fields(self, **kwargs):
+            from ai_idp.application.ports.protocols import VerificationBatchResult
+
+            return VerificationBatchResult(
+                outcomes={
+                    "/total": VerificationOutcome(
+                        field_path="/total",
+                        status=VerificationStatus.SUPPORTED,
+                        model_id="dec_model",
+                    )
+                }
+            )
+
+    class FakeJobRepo:
+        def get_job(self, *args, **kwargs):
+            return job
+
+        def is_cancelled(self, *args, **kwargs):
+            return False
+
+    class FakeResultRepo:
+        def load_step(self, *args, **kwargs):
+            return None
+
+        def save_step(self, *args, **kwargs):
+            pass
+
+        def record_field_attempt(self, *args, **kwargs):
+            pass
+
+        def record_decisions(self, *args, **kwargs):
+            pass
+
+    class MockTelemetry:
+        def span(self, *args, **kwargs):
+            from contextlib import nullcontext
+
+            return nullcontext()
+
+    service = ExtractionPipelineService(
+        blob_store=None,
+        document_reader=None,
+        relevance_engine=None,
+        extraction_engine=MockExtractor(),
+        decision_engine=MockDecisionEngine(),
+        job_repo=FakeJobRepo(),
+        result_repo=FakeResultRepo(),
+        telemetry=MockTelemetry(),
+    )
+
+    u1 = _make_unit("page_1", modalities=[Modality.TEXT, Modality.TEXT_AND_VISION])
+    u2 = _make_unit("page_2", modalities=[Modality.TEXT, Modality.TEXT_AND_VISION])
+    u3 = _make_unit("page_3", modalities=[Modality.TEXT, Modality.TEXT_AND_VISION])
+
+    payloads = {
+        "page_1": UnitInputPayload(unit=u1, native_text="Page 1 text"),
+        "page_2": UnitInputPayload(unit=u2, native_text="Page 2 text"),
+        "page_3": UnitInputPayload(unit=u3, native_text="Page 3 text Total: 1,200"),
+    }
+
+    # Field failed on page 3
+    ev = Evidence(unit_id="page_3", quote="Total: 1,200")
+    fv = FieldValue(
+        path="/total",
+        value=1100,
+        status=FieldStatus.UNVERIFIED,
+        verification=VerificationStatus.INSUFFICIENT_EVIDENCE,
+        sources=[ev],
+    )
+    spec_field = TargetFieldSpec(path="/total", name="total", field_type="integer")
+    run_spec = ExtractionSpecification(
+        spec_id="spec_1", schema_hash="hash1", schema_json={}, fields=[spec_field]
+    )
+    job = ExtractionRun(
+        job_id="test_esc",
+        document_id="doc_test",
+        spec_id="spec_1",
+        configuration=PipelineConfiguration(max_field_extra_attempts=1),
+    )
+
+    await service._run_escalation(
+        job=job,
+        spec=run_spec,
+        fields_to_escalate=[spec_field],
+        field_values={"/total": fv},
+        payload_by_id=payloads,
+        unit_by_id={"page_1": u1, "page_2": u2, "page_3": u3},
+        record_usage=lambda u: None,
+    )
+
+    # First attempt must target page_3 ONLY, not all 3 pages
+    assert len(extracted_units_passed) == 1
+    assert extracted_units_passed[0] == ["page_3"]

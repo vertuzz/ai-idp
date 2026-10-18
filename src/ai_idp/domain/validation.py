@@ -66,6 +66,23 @@ def is_ambiguous_date_notation(text: str) -> bool:
     return False
 
 
+def _build_token_pattern(target: str) -> str:
+    """Build regex pattern matching whole tokens, preserving signs and decimal fractions."""
+    if re.fullmatch(r"[-+]?\d+(?:[.,\s]\d+)*", target):
+        # Preceding boundary: cannot be preceded by digits, decimal/thousand separators, or sign
+        pre_boundary = r"(?<![\d.,+-])"
+        # Succeeding boundary:
+        # If target has decimal fraction (e.g. '100.50'), cannot be followed by another digit
+        # If target has no decimal fraction (e.g. '100'),
+        # cannot be followed by digits or decimal point+digit
+        if re.search(r"[.,]\d+$", target):
+            post_boundary = r"(?!\d)"
+        else:
+            post_boundary = r"(?!(?:[.,]\d|\d))"
+        return pre_boundary + re.escape(target) + post_boundary
+    return r"(?<!\w)" + re.escape(target) + r"(?!\w)"
+
+
 def validate_source_anchoring(
     *,
     unit: DocumentUnit | None,
@@ -199,20 +216,12 @@ def validate_source_anchoring(
             evidence_references=[evidence.unit_id],
         )
 
-    # Whole-token pattern matching (100 inside 1000 must NOT match 100)
-    if re.fullmatch(r"[-+]?\d+(?:[.,]\d+)*", clean_target):
-        pattern = r"(?<!\d)" + re.escape(clean_target) + r"(?!\d)"
-    else:
-        pattern = r"(?<!\w)" + re.escape(clean_target) + r"(?!\w)"
-
+    pattern = _build_token_pattern(clean_target)
     matches = list(re.finditer(pattern, native_text))
     if len(matches) == 0:
         norm_native = _normalize_whitespace(native_text)
         norm_target = _normalize_whitespace(clean_target)
-        if re.fullmatch(r"[-+]?\d+(?:[.,]\d+)*", norm_target):
-            norm_pattern = r"(?<!\d)" + re.escape(norm_target) + r"(?!\d)"
-        else:
-            norm_pattern = r"(?<!\w)" + re.escape(norm_target) + r"(?!\w)"
+        norm_pattern = _build_token_pattern(norm_target)
         norm_matches = list(re.finditer(norm_pattern, norm_native))
         if len(norm_matches) == 1:
             return CheckResult(
@@ -265,6 +274,45 @@ def validate_source_anchoring(
         policy_version=policy_version,
         evidence_references=[evidence.unit_id],
     )
+
+
+def _parse_candidate_numbers_from_text(raw_text: str) -> list[Decimal]:
+    """Parse all numeric candidate values and magnitudes from a text string."""
+    results: list[Decimal] = []
+    # Match numbers with optional magnitude word (million, billion, thousand)
+    pattern = (
+        r"[-+]?(?:\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
+        r"(?:\s*(?:million|billion|thousand))?"
+    )
+    for m in re.finditer(pattern, raw_text, flags=re.IGNORECASE):
+        token = m.group(0).strip()
+        if not token:
+            continue
+        multiplier = Decimal("1")
+        if re.search(r"\bmillion\b", token, re.IGNORECASE):
+            multiplier = Decimal("1000000")
+        elif re.search(r"\bbillion\b", token, re.IGNORECASE):
+            multiplier = Decimal("1000000000")
+        elif re.search(r"\bthousand\b", token, re.IGNORECASE):
+            multiplier = Decimal("1000")
+
+        num_str = re.sub(r"\b(million|thousand|billion)\b", "", token, flags=re.IGNORECASE).strip()
+        num_str = num_str.replace(" ", "")
+
+        # European format: e.g. '1.200,00' or '1200,00' or '1.200'
+        if re.search(r"\d+\.\d{3},\d+", num_str) or re.search(r"^\d+,\d{2}$", num_str):
+            clean_str = num_str.replace(".", "").replace(",", ".")
+        elif re.search(r"^\d{1,3}(?:\.\d{3})+$", num_str):
+            clean_str = num_str.replace(".", "")
+        else:
+            clean_str = num_str.replace(",", "")
+
+        try:
+            val = Decimal(clean_str) * multiplier
+            results.append(val)
+        except (InvalidOperation, ValueError):
+            continue
+    return results
 
 
 def validate_typed_value(
@@ -368,35 +416,29 @@ def validate_typed_value(
 
     # 3. Numeric / Decimal checks
     if field_spec.field_type in ("integer", "number") or isinstance(value, (int, float, Decimal)):
-        # Extract numeric magnitude if words like 'million' exist
-        multiplier = Decimal("1")
-        if re.search(r"\bmillion\b", str(raw_text), re.IGNORECASE):
-            multiplier = Decimal("1000000")
-
-        num_part = re.sub(r"\b(million|thousand|billion)\b", "", str(raw_text), flags=re.IGNORECASE)
-        clean_num_str = re.sub(r"[^\d,.-]", "", num_part).strip()
-        # If European format with dots for thousands and comma for decimal:
-        # e.g., '1.200,00' or '1200,00'
-        if re.search(r"\d+\.\d{3},\d+", clean_num_str) or re.search(r"^\d+,\d{2}$", clean_num_str):
-            clean_num_str = clean_num_str.replace(".", "").replace(",", ".")
-        else:
-            clean_num_str = clean_num_str.replace(",", "")
-
-        match = re.search(r"[-+]?\d+(?:\.\d+)?", clean_num_str)
-        if match:
+        if raw_text is not None and str(raw_text).strip():
+            candidate_numbers = _parse_candidate_numbers_from_text(str(raw_text))
             try:
-                raw_dec = Decimal(match.group(0)) * multiplier
                 cand_dec = Decimal(str(value))
-                if raw_dec != cand_dec:
-                    # Do not allow fuzzy/edit-distance digit acceptance (e.g. 55854 vs 55834)
+                if any(cand_dec == src_dec for src_dec in candidate_numbers):
+                    results.append(
+                        CheckResult(
+                            check_name="numeric_precision",
+                            outcome=CheckOutcome.PASS,
+                            reason_code="NUMERIC_VALUE_EXACT",
+                            message=f"Candidate number {cand_dec} matches source decimal.",
+                            policy_version=policy_version,
+                        )
+                    )
+                elif candidate_numbers:
                     results.append(
                         CheckResult(
                             check_name="numeric_precision",
                             outcome=CheckOutcome.FAIL,
                             reason_code="NUMERIC_VALUE_MISMATCH",
                             message=(
-                                f"Candidate number {cand_dec} does not equal "
-                                f"source number {raw_dec}."
+                                f"Candidate number {cand_dec} does not match any numbers "
+                                f"in source text: {candidate_numbers}."
                             ),
                             policy_version=policy_version,
                         )
@@ -405,9 +447,11 @@ def validate_typed_value(
                     results.append(
                         CheckResult(
                             check_name="numeric_precision",
-                            outcome=CheckOutcome.PASS,
-                            reason_code="NUMERIC_VALUE_EXACT",
-                            message=f"Candidate number {cand_dec} matches source decimal.",
+                            outcome=CheckOutcome.INDETERMINATE,
+                            reason_code="NO_NUMERIC_CONTENT",
+                            message=(
+                                f"No numeric tokens could be parsed from source text '{raw_text}'."
+                            ),
                             policy_version=policy_version,
                         )
                     )
@@ -429,23 +473,54 @@ def validate_field_association(
     if not isinstance(field_value, str):
         return results
 
-    # If field is an item name, check if it contains concatenated quantity/price tokens
-    # e.g. "RTD Kunyit 1 15000" where price and quantity leaked into name
     if "name" in field_name.lower():
-        trailing_numbers = re.findall(r"\b\d+(?:[.,]\d+)?\b", field_value)
-        if len(trailing_numbers) >= 2:
-            # Name has multiple numbers at the end (likely quantity + price merged)
-            results.append(
-                CheckResult(
-                    check_name="field_association",
-                    outcome=CheckOutcome.FAIL,
-                    reason_code="MERGED_ITEM_FIELDS",
-                    message=(
-                        f"Item name '{field_value}' appears to contain merged "
-                        "quantity and price numbers."
-                    ),
-                    policy_version=policy_version,
+        # Check if field ends with multiple bare trailing numbers separated by whitespace
+        # e.g. "RTD Kunyit 1 15000"
+        m = re.search(r"\s+(\d+(?:[.,]\d+)?)\s+(\d+(?:[.,]\d+)?)\s*$", field_value)
+        if m:
+            n1, n2 = m.group(1), m.group(2)
+            is_proven = False
+            if item_fields is not None:
+                known_col_vals = {
+                    str(v).replace(",", "").replace(".", "").strip()
+                    for k, v in item_fields.items()
+                    if v is not None and str(v).strip()
+                }
+                c1 = n1.replace(",", "").replace(".", "").strip()
+                c2 = n2.replace(",", "").replace(".", "").strip()
+                if (
+                    c1 in known_col_vals
+                    or c2 in known_col_vals
+                    or item_fields.get("quantity") is None
+                ):
+                    is_proven = True
+
+            if is_proven:
+                results.append(
+                    CheckResult(
+                        check_name="field_association",
+                        outcome=CheckOutcome.FAIL,
+                        reason_code="MERGED_ITEM_FIELDS",
+                        message=(
+                            f"Item name '{field_value}' contains proven merged "
+                            f"quantity ({n1}) and price ({n2}) columns."
+                        ),
+                        policy_version=policy_version,
+                    )
                 )
-            )
+            else:
+                results.append(
+                    CheckResult(
+                        check_name="field_association",
+                        outcome=CheckOutcome.INDETERMINATE,
+                        reason_code="SUSPECTED_MERGED_FIELDS",
+                        message=(
+                            f"Item name '{field_value}' ends with multiple trailing "
+                            f"numbers ({n1}, {n2}); suspected merged table columns "
+                            "pending verification."
+                        ),
+                        policy_version=policy_version,
+                    )
+                )
 
     return results
