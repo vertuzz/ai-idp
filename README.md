@@ -76,6 +76,10 @@ history, source text/images and paginated decisions are available for inspection
 
 ## Core ideas
 
+The engine also supports bounded [schema suggestions from example documents](docs/21-schema-suggestions.md).
+Upload 1–5 related examples, generate a small editable schema, then reuse it in ordinary
+extraction jobs. Suggestions run as separate durable, budgeted jobs on the same worker.
+
 1. **Model-controlled relevance:** select document units relevant to the requested fields instead of automatically extracting from the entire file.
 2. **Model-controlled modality:** decide between existing text, page images, or both, without content-dependent hard-coded routing heuristics.
 3. **Evidence-bound results:** every extracted field can point to its original sources; a value is not considered verified merely because a generative LLM returned it.

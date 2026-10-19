@@ -22,19 +22,28 @@ class WorkerRunner:
         self._poll_seconds = container.settings.worker_poll_seconds
         self._max_concurrent = container.settings.max_concurrent_jobs
         self._stop_event = asyncio.Event()
+        self._prefer_suggestions = True
 
     def stop(self) -> None:
         self._stop_event.set()
 
     async def process_one_if_available(self) -> str | None:
+        if self._prefer_suggestions:
+            suggestion_id = await self._container.suggestion_service.process_one_if_available()
+            if suggestion_id is not None:
+                self._prefer_suggestions = False
+                return suggestion_id
         owner = f"{self._worker_id}:{uuid.uuid4().hex}"
         job = self._container.job_repo.lease_next_job(
             worker_id=owner,
             lease_seconds=self._lease_seconds,
         )
         if job is None:
+            if not self._prefer_suggestions:
+                return await self._container.suggestion_service.process_one_if_available()
             return None
 
+        self._prefer_suggestions = True
         try:
             await self._container.pipeline_service.execute_job(job.job_id, lease_owner=owner)
             return job.job_id

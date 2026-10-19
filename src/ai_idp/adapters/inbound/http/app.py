@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from ai_idp.adapters.inbound.http.body_limit import BodyLimitMiddleware, RequestBodyTooLarge
 from ai_idp.adapters.inbound.http.dependencies import AppContainer, build_container
 from ai_idp.adapters.inbound.http.result_pages import router as result_pages_router
+from ai_idp.adapters.inbound.http.schema_suggestions import router as schema_suggestions_router
 from ai_idp.adapters.inbound.http.schemas import (
     CreateExtractionRequest,
     CreateExtractionResponse,
@@ -118,6 +119,7 @@ def create_app(
     v1 = APIRouter(prefix="/v1", dependencies=router_dependencies)
     v1.include_router(source_preview_router)
     v1.include_router(result_pages_router)
+    v1.include_router(schema_suggestions_router)
 
     @v1.post("/documents", status_code=201, response_model=DocumentUploadResponse)
     async def upload_document(

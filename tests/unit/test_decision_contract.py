@@ -19,6 +19,43 @@ from ai_idp.domain.schema_normalizer import normalize_extraction_schema
 OPTIONS = ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT_EVIDENCE"]
 
 
+async def test_schema_assessment_keeps_document_identities_and_requires_every_answer():
+    engine = OpenRouterDecisionEngine(api_key="unused")
+    engine._post_decisions = AsyncMock(
+        return_value=(
+            {"answers": {"compatible": {"choice": "SHARED"}}},
+            1,
+        )
+    )
+    payloads = [
+        UnitInputPayload(
+            unit=DocumentUnit(
+                unit_id="page_1",
+                document_id=doc_id,
+                ordinal=1,
+                kind=UnitKind.PDF_PAGE,
+            ),
+            native_text=f"Original source for {doc_id}",
+        )
+        for doc_id in ["first", "second"]
+    ]
+    questions = {
+        "compatible": {
+            "type": "choice",
+            "instructions": "Shared schema?",
+            "criteria": {"SHARED": "Fits", "DIFFERENT": "Does not fit"},
+        }
+    }
+    output, _ = await engine.assess_schema("job", payloads, questions, "model")
+    assert output["compatible"]["choice"] == "SHARED"
+    state = str(engine._post_decisions.call_args.args[1])
+    assert "Document ID: first" in state and "Document ID: second" in state
+    assert "Original source for first" in state and "Original source for second" in state
+    questions["missing"] = questions["compatible"]
+    with pytest.raises(ProviderError):
+        await engine.assess_schema("job", payloads, questions, "model")
+
+
 @pytest.mark.parametrize(
     "answer",
     [

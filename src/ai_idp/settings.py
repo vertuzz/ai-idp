@@ -50,6 +50,18 @@ class Settings(BaseSettings):
         default="google/gemini-4-argon",
         validation_alias=AliasChoices("AI_IDP_ESCALATION_MODEL", "OPENROUTER_ESCALATION_MODEL"),
     )
+    schema_suggestion_model: str = Field(
+        default="anthropic/claude-haiku-5.5", validation_alias="AI_IDP_SCHEMA_SUGGESTION_MODEL"
+    )
+    schema_suggestion_max_cost_usd: float = Field(
+        default=0.05, gt=0, validation_alias="SCHEMA_SUGGESTION_MAX_COST_USD"
+    )
+    schema_suggestion_max_calls: int = Field(
+        default=12, ge=4, le=50, validation_alias="SCHEMA_SUGGESTION_MAX_CALLS"
+    )
+    schema_suggestion_units_per_document: int = Field(
+        default=3, ge=1, le=8, validation_alias="SCHEMA_SUGGESTION_UNITS_PER_DOCUMENT"
+    )
 
     database_url: str = Field(
         # pragma: allowlist nextline secret (public local-development default)

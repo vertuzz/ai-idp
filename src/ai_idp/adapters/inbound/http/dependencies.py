@@ -8,6 +8,7 @@ from ai_idp.adapters.outbound.documents.pdf_artifacts import PdfArtifactStore
 from ai_idp.adapters.outbound.openrouter.decisions_client import OpenRouterDecisionEngine
 from ai_idp.adapters.outbound.openrouter.extraction_client import PydanticAIExtractionEngine
 from ai_idp.adapters.outbound.openrouter.relevance_client import GenerativeRelevanceEngine
+from ai_idp.adapters.outbound.openrouter.schema_client import OpenRouterSchemaGenerationEngine
 from ai_idp.adapters.outbound.persistence.database import (
     build_engine,
     build_session_factory,
@@ -18,6 +19,7 @@ from ai_idp.adapters.outbound.persistence.repositories import (
     SqlAlchemyJobRepository,
     SqlAlchemyResultRepository,
 )
+from ai_idp.adapters.outbound.persistence.suggestions import SqlAlchemySuggestionRepository
 from ai_idp.adapters.outbound.telemetry.otel import OpenTelemetryJsonlAdapter
 from ai_idp.application.ports.protocols import (
     DecisionEngine,
@@ -29,7 +31,9 @@ from ai_idp.application.ports.protocols import (
     ResultRepository,
     TelemetryPort,
 )
+from ai_idp.application.ports.schema_suggestion import SchemaDecisionEngine, SchemaGenerationEngine
 from ai_idp.application.services.pipeline import ExtractionPipelineService
+from ai_idp.application.services.schema_suggestion import SchemaSuggestionService
 from ai_idp.application.use_cases.ingest_document import IngestDocumentUseCase
 from ai_idp.application.use_cases.inspect_job import InspectJobUseCase
 from ai_idp.application.use_cases.request_extraction import RequestExtractionUseCase
@@ -52,6 +56,7 @@ class AppContainer:
     ingest_use_case: IngestDocumentUseCase
     request_extraction_use_case: RequestExtractionUseCase
     inspect_job_use_case: InspectJobUseCase
+    suggestion_service: SchemaSuggestionService
 
 
 def build_container(
@@ -65,6 +70,8 @@ def build_container(
     job_repo: JobRepository | None = None,
     result_repo: ResultRepository | None = None,
     telemetry: TelemetryPort | None = None,
+    schema_generation_engine: SchemaGenerationEngine | None = None,
+    schema_decision_engine: SchemaDecisionEngine | None = None,
     create_tables: bool = False,
 ) -> AppContainer:
     cfg = settings or get_settings()
@@ -159,4 +166,13 @@ def build_container(
         ingest_use_case=ingest_use_case,
         request_extraction_use_case=request_extraction_use_case,
         inspect_job_use_case=inspect_job_use_case,
+        suggestion_service=SchemaSuggestionService(
+            repository=SqlAlchemySuggestionRepository(session_factory, cfg.max_concurrent_jobs),
+            job_repo=resolved_job_repo,
+            blob_store=resolved_blob_store,
+            decision_engine=schema_decision_engine or dec_engine,
+            generation_engine=schema_generation_engine
+            or OpenRouterSchemaGenerationEngine(ext_engine),
+            settings=cfg,
+        ),
     )

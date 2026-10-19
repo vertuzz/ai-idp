@@ -5,6 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from ai_idp.adapters.outbound.persistence import suggestions  # noqa: F401
 from ai_idp.adapters.outbound.persistence.models import Base
 from ai_idp.settings import get_settings
 

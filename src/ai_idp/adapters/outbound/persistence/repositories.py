@@ -23,6 +23,7 @@ from ai_idp.adapters.outbound.persistence.models import (
     ModelRequestLeaseRow,
     UsageRecordRow,
 )
+from ai_idp.adapters.outbound.persistence.suggestions import SuggestionRow
 from ai_idp.domain.enums import (
     DecisionKind,
     DocumentStatus,
@@ -376,6 +377,14 @@ class SqlAlchemyJobRepository:
                 select(func.count())
                 .select_from(JobQueueRow)
                 .where(JobQueueRow.status == "leased", JobQueueRow.lease_until > now)
+            )
+            active += session.scalar(
+                select(func.count())
+                .select_from(SuggestionRow)
+                .where(
+                    SuggestionRow.status == "running",
+                    SuggestionRow.lease_until > now,
+                )
             )
             if active >= self._max_concurrent_jobs:
                 return None
