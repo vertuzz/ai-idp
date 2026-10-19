@@ -97,7 +97,7 @@ history, source text/images and paginated decisions are available for inspection
 | Included in MVP | Explicitly deferred |
 |---|---|
 | HTTP file upload and async extraction jobs | S3 and presigned uploads |
-| PDF, DOCX, PNG, JPEG, TIFF, XLSX, XLSM, XLS, XLSB | Office-faithful page rendering and formula recalculation |
+| PDF, DOCX, PNG, JPEG, TIFF, XLSX, XLSM, XLS, XLSB; bounded OOXML formula arithmetic | Office-faithful page rendering and complete Excel formula compatibility |
 | Schema-aware page-batch relevance and modality routing | Classical OCR, Docling, LibreOffice |
 | Dynamic JSON Schema extraction | Fixed industry schemas |
 | Provenance and field verification | Unrestricted autonomous agents |
@@ -127,6 +127,7 @@ Deterministic **mechanical** operations are still required: parsing files, rende
 | [Page-batch validation](docs/16-page-batch-validation.md) | v4 routing contract, offline checks and the 72-file development run |
 | [Excel and bounded-result research plan](docs/18-spreadsheets-and-bounded-results-plan.md) | Parser experiments, Excel scope, generation limits, resumable parts and result pagination |
 | [Excel and paged results](docs/19-spreadsheets-and-paged-results.md) | Formats, parser safety, partition extraction, paging contract and UI |
+| [Bounded formulas and large documents](docs/20-bounded-formulas-and-large-documents.md) | Formula calculation, nested results, on-demand PDF pages, work estimates and regressions |
 
 
 ## Public-project rules

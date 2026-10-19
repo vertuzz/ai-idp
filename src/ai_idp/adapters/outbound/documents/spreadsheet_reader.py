@@ -12,9 +12,15 @@ from typing import Any
 from zipfile import ZipFile
 
 from defusedxml import ElementTree as XML
+from openpyxl.formula.translate import Translator
 from openpyxl.styles.numbers import BUILTIN_FORMATS
 from openpyxl.utils.cell import coordinate_to_tuple, get_column_letter
 
+from ai_idp.adapters.outbound.documents.formulas import (
+    FormulaCell,
+    FormulaEvaluator,
+    UnsupportedFormula,
+)
 from ai_idp.application.ports.protocols import DocumentBlobStore
 from ai_idp.domain.enums import UnitKind
 from ai_idp.domain.errors import (
@@ -138,6 +144,9 @@ class SpreadsheetDocumentReader:
                     "unavailable_images": list(warnings),
                     "cells_ref": cells_ref,
                     "cell_spans": spans,
+                    "cell_calculations": {
+                        c["cell"]: c["calculation"] for c in cells if c.get("calculation")
+                    },
                     "owned_cells": [c["cell"] for c in cells],
                     "sheet_context": getattr(self, "sheet_context", ""),
                 },
@@ -266,6 +275,11 @@ class SpreadsheetDocumentReader:
                 notices.append(
                     "Embedded images are workbook context; drawing anchors are unavailable."
                 )
+            evaluator = self._formula_index(archive, sheets, rels, shared)
+            if evaluator is None:
+                notices.append(
+                    "Formula recalculation unavailable: workbook calculation index limit exceeded."
+                )
             for index, sheet in enumerate(sheets, 1):
                 part = rels.get(sheet.get(REL + "id"))
                 if not part or "worksheets/" not in part:
@@ -278,13 +292,15 @@ class SpreadsheetDocumentReader:
                     )
                     continue
 
-                def records(part: str = part):
+                def records(part: str = part, sheet_name: str = sheet.get("name", "Sheet")):
+                    shared_formulas: dict[str, tuple[str, str]] = {}
                     with archive.open(part) as stream:
                         for _, node in XML.iterparse(stream, events=("end",)):
                             if node.tag == NS + "c":
                                 ref = node.get("r", "")
                                 coordinate_to_tuple(ref)
                                 formula = node.find(NS + "f")
+                                formula_text = self._formula_text(formula, ref, shared_formulas)
                                 cached = node.find(NS + "v")
                                 kind = node.get("t", "n")
                                 value = cached.text if cached is not None else None
@@ -298,6 +314,35 @@ class SpreadsheetDocumentReader:
                                 if formula is not None or value not in (None, ""):
                                     style = int(node.get("s", "0"))
                                     fmt = styles[style] if style < len(styles) else ""
+                                    cached_value = value
+                                    calculation = None
+                                    if formula is not None:
+                                        calculation = {
+                                            "status": "unsupported",
+                                            "reason": "Calculation index limit exceeded.",
+                                        }
+                                        if evaluator is not None:
+                                            try:
+                                                computed, calculation = evaluator.evaluate(
+                                                    sheet_name, ref
+                                                )
+                                                value = (
+                                                    str(computed)
+                                                    if isinstance(computed, Decimal)
+                                                    else computed
+                                                )
+                                                if isinstance(value, bool):
+                                                    value, kind = ("1" if value else "0"), "b"
+                                                elif isinstance(computed, Decimal):
+                                                    kind = "n"
+                                                else:
+                                                    kind = "str"
+                                            except UnsupportedFormula as error:
+                                                calculation = {
+                                                    "status": "unsupported",
+                                                    "reason": str(error),
+                                                }
+                                        calculation["cached_value"] = cached_value
                                     display = formatted_value(value, kind, fmt)
                                     content = (
                                         f"{ref}: {display if display is not None else '<missing>'}"
@@ -306,8 +351,11 @@ class SpreadsheetDocumentReader:
                                         content += f" [raw_numeric={value}]"
                                     if formula is not None:
                                         content += (
-                                            f" [formula={formula.text or '<shared>'}; "
-                                            f"cached={json.dumps(value)}]"
+                                            f" [formula={formula_text or '<unavailable>'}; "
+                                            f"cached={json.dumps(cached_value)}; "
+                                            "calculation="
+                                            + json.dumps(calculation, ensure_ascii=True)
+                                            + "]"
                                         )
                                     if fmt and fmt != "General":
                                         content += f" [format={fmt}; date_epoch={epoch}]"
@@ -316,7 +364,11 @@ class SpreadsheetDocumentReader:
                                         "value": value,
                                         "display_value": display,
                                         "type": kind,
-                                        "formula": formula.text if formula is not None else None,
+                                        "formula": formula_text,
+                                        "formula_attributes": dict(formula.attrib)
+                                        if formula is not None
+                                        else {},
+                                        "calculation": calculation,
                                         "cache_present": cached is not None,
                                         "number_format": fmt,
                                         "date_epoch": epoch,
@@ -334,6 +386,68 @@ class SpreadsheetDocumentReader:
                     notices,
                     media if index == 1 else None,
                 )
+
+    @staticmethod
+    def _formula_text(formula, ref, shared_formulas):
+        if formula is None:
+            return None
+        if formula.get("t") == "shared":
+            group = formula.get("si", "")
+            if formula.text:
+                shared_formulas[group] = (ref, formula.text)
+            elif group in shared_formulas:
+                origin, text = shared_formulas[group]
+                try:
+                    return Translator("=" + text, origin=origin).translate_formula(ref)[1:]
+                except Exception:
+                    return "<unsupported shared formula>"
+        return formula.text or "<unsupported formula>"
+
+    def _formula_index(self, archive, sheets, rels, shared):
+        cells = {}
+        for sheet in sheets:
+            part = rels.get(sheet.get(REL + "id"))
+            if not part or "worksheets/" not in part:
+                continue
+            shared_formulas = {}
+            with archive.open(part) as stream:
+                for _, node in XML.iterparse(stream, events=("end",)):
+                    if node.tag == NS + "c":
+                        ref = node.get("r", "")
+                        formula = node.find(NS + "f")
+                        cached = node.find(NS + "v")
+                        value = cached.text if cached is not None else None
+                        kind = node.get("t", "n")
+                        if kind == "s" and value is not None:
+                            value = shared[int(value)]
+                        elif kind == "inlineStr":
+                            value = "".join(t.text or "" for t in node.iter(NS + "t"))
+                        elif kind == "n" and value is not None:
+                            try:
+                                value = Decimal(value)
+                            except InvalidOperation:
+                                value = "<invalid numeric value>"
+                        elif kind == "b":
+                            value = value in {"1", "true"}
+                        elif kind == "e":
+                            value = "<cached formula error>"
+                        if formula is not None or value is not None:
+                            if len(cells) >= self.settings.max_formula_cells:
+                                return None
+                            cells[(sheet.get("name", "Sheet"), ref)] = FormulaCell(
+                                value,
+                                self._formula_text(formula, ref, shared_formulas),
+                                "Array/data-table formulas are unsupported."
+                                if formula is not None
+                                and formula.get("t") not in {None, "normal", "shared"}
+                                else "Source cell contains an Excel error or invalid number."
+                                if kind == "e" or value == "<invalid numeric value>"
+                                else None,
+                            )
+                        node.clear()
+                    elif node.tag == NS + "row":
+                        node.clear()
+        return FormulaEvaluator(cells, max_steps=self.settings.max_formula_steps)
 
     def _calamine(self, raw: bytes) -> None:
         from python_calamine import CalamineWorkbook, SheetTypeEnum

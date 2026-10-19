@@ -241,9 +241,14 @@ class PydanticAIExtractionEngine:
                             "type": "object",
                             "properties": {
                                 "quote": {"type": "string", "minLength": 1, "maxLength": 500},
+                                "end_quote": {
+                                    "type": ["string", "null"],
+                                    "minLength": 1,
+                                    "maxLength": 500,
+                                },
                                 "occurrence": {"type": "integer", "minimum": 0},
                             },
-                            "required": ["quote", "occurrence"],
+                            "required": ["quote", "occurrence", "end_quote"],
                             "additionalProperties": False,
                         },
                     },
@@ -305,6 +310,9 @@ class PydanticAIExtractionEngine:
                 " Evidence JSON Pointers use LOCAL zero-based item indices in this "
                 "response, regardless of source row numbers or previous pages: the first "
                 "returned record uses /items/0/... even when its ID is LOT-000031."
+                " Include end_quote: a unique verbatim substring at the END of the complete "
+                "owned record, including its final cell address for workbooks. Use null when "
+                "the end is only in adjacent context. Never include the next record in it."
             )
         for payload, modality in unit_inputs:
             u = payload.unit
@@ -323,24 +331,28 @@ class PydanticAIExtractionEngine:
             if spec.output_page:
                 if payload.prev_excerpt:
                     user_parts.append(
-                        "Previous context (not owned): " + payload.prev_excerpt[-2000:]
+                        "Previous context (records not owned; "
+                        f"source unit {payload.prev_unit_id}): " + payload.prev_excerpt[-2000:]
                     )
                 if payload.next_excerpt:
                     user_parts.append(
-                        "Following context (not owned): " + payload.next_excerpt[:2000]
+                        "Following context (records not owned; "
+                        f"source unit {payload.next_unit_id}): " + payload.next_excerpt[:2000]
                     )
+                user_parts.append(
+                    "A record starting in the owned unit may continue in adjacent context. "
+                    "Read its complete values there and cite that context's actual source unit ID "
+                    "with a verbatim quote. Do not use text offsets for adjacent context. "
+                    "Do not emit a separate record for a continuation."
+                )
             if modality in (Modality.TEXT, Modality.TEXT_AND_VISION) and payload.native_text:
                 user_parts.append(f"Unit Text ({u.unit_id}):\n{payload.native_text}")
             elif modality == Modality.TEXT and not payload.native_text:
                 user_parts.append(f"Unit Text ({u.unit_id}): <no native text available>")
 
             if modality in (Modality.VISION, Modality.TEXT_AND_VISION):
-                images = (
-                    [(payload.image_bytes, payload.image_media_type)] if payload.image_bytes else []
-                )
-                for idx, (content, media_type) in enumerate(
-                    [*images, *payload.additional_images], start=1
-                ):
+                images = await asyncio.to_thread(lambda payload=payload: list(payload.images()))
+                for idx, (content, media_type) in enumerate(images, start=1):
                     user_parts.append(f"Unit Image ({u.unit_id}, image {idx}):")
                     user_parts.append(BinaryContent(data=content, media_type=media_type))
 
@@ -391,9 +403,17 @@ class PydanticAIExtractionEngine:
                 try:
                     span_obj = TextSpan(
                         start=int(text_span_dict["start"])
-                        + int((spec.output_page or {}).get("source_text_start", 0)),
+                        + (
+                            int((spec.output_page or {}).get("source_text_start", 0))
+                            if uid == (spec.output_page or {}).get("owned_unit")
+                            else 0
+                        ),
                         end=int(text_span_dict["end"])
-                        + int((spec.output_page or {}).get("source_text_start", 0)),
+                        + (
+                            int((spec.output_page or {}).get("source_text_start", 0))
+                            if uid == (spec.output_page or {}).get("owned_unit")
+                            else 0
+                        ),
                     )
                 except (ValueError, TypeError):
                     span_obj = None

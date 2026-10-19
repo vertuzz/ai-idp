@@ -116,6 +116,16 @@ class RequestExtractionUseCase:
         self._job_repo.save_spec(spec)
 
         units = self._job_repo.get_units(document_id)
+        from ai_idp.application.services.work_estimate import estimate_work
+
+        estimate = estimate_work(units, spec.fields, config)
+        if not estimate["can_fit_minimum"]:
+            raise DomainError(
+                "The minimum routing work exceeds this job's model-call budget; use a smaller "
+                "document or an explicitly configured larger budget.",
+                code="work_exceeds_budget",
+                http_status=422,
+            )
         config = build_pipeline_config(
             self._settings,
             model_profile=model_profile,

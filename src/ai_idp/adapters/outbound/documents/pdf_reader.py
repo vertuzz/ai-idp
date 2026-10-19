@@ -21,10 +21,12 @@ class PyMuPdfDocumentReader:
         max_pages: int = 1000,
         render_dpi: int = 150,
         max_image_pixels: int = 40_000_000,
+        lazy_render: bool = False,
     ) -> None:
         self._max_pages = max_pages
         self._render_dpi = render_dpi
         self._max_image_pixels = max_image_pixels
+        self._lazy_render = lazy_render
 
     def supports(self, media_type: str) -> bool:
         return media_type == "application/pdf"
@@ -72,10 +74,30 @@ class PyMuPdfDocumentReader:
                 if est_pixels > self._max_image_pixels and est_pixels > 0:
                     scale = math.sqrt(self._max_image_pixels / max(1.0, width_pt * height_pt))
                 matrix = pymupdf.Matrix(scale, scale)
-                pix = page.get_pixmap(matrix=matrix, alpha=False)
-                png_bytes = pix.tobytes("png")
                 image_key = f"artifacts/{document.document_id}/render/{unit_id}.png"
-                blob_store.put_bytes(image_key, png_bytes)
+                lazy = self._lazy_render and bool(getattr(blob_store, "supports_lazy_pdf", False))
+                if lazy:
+                    png_bytes = None
+                    rendered_width, rendered_height = (
+                        math.ceil(rect.width * scale),
+                        math.ceil(rect.height * scale),
+                    )
+                    blob_store.put_text(
+                        image_key + ".render.json",
+                        json.dumps(
+                            {
+                                "original": document.storage_key,
+                                "page_index": idx,
+                                "scale": scale,
+                                "max_pixels": self._max_image_pixels,
+                            }
+                        ),
+                    )
+                else:
+                    pix = page.get_pixmap(matrix=matrix, alpha=False)
+                    png_bytes = pix.tobytes("png")
+                    rendered_width, rendered_height = pix.width, pix.height
+                    blob_store.put_bytes(image_key, png_bytes)
 
                 # Map only complete words found in canonical text, preserving offsets.
                 # PDF word coordinates are unrotated; page previews include rotation.
@@ -110,7 +132,9 @@ class PyMuPdfDocumentReader:
                         {
                             "version": 1,
                             "text_sha256": hashlib.sha256(clean_text.encode("utf-8")).hexdigest(),
-                            "image_sha256": hashlib.sha256(png_bytes).hexdigest(),
+                            "image_sha256": hashlib.sha256(png_bytes).hexdigest()
+                            if png_bytes
+                            else None,
                             "words": words,
                         }
                     ),
@@ -130,8 +154,9 @@ class PyMuPdfDocumentReader:
                             "text_geometry_ref": geometry_key,
                             "width_points": width_pt,
                             "height_points": height_pt,
-                            "rendered_width_px": pix.width,
-                            "rendered_height_px": pix.height,
+                            "rendered_width_px": rendered_width,
+                            "rendered_height_px": rendered_height,
+                            "lazy_render": lazy,
                             "image_count": len(image_list),
                             "text_character_count": len(clean_text),
                         },

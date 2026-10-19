@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 
 from ai_idp.adapters.outbound.documents.isolated_reader import IsolatedDocumentReader
+from ai_idp.adapters.outbound.documents.pdf_artifacts import PdfArtifactStore
 from ai_idp.adapters.outbound.openrouter.decisions_client import OpenRouterDecisionEngine
 from ai_idp.adapters.outbound.openrouter.extraction_client import PydanticAIExtractionEngine
 from ai_idp.adapters.outbound.openrouter.relevance_client import GenerativeRelevanceEngine
@@ -17,7 +18,6 @@ from ai_idp.adapters.outbound.persistence.repositories import (
     SqlAlchemyJobRepository,
     SqlAlchemyResultRepository,
 )
-from ai_idp.adapters.outbound.storage.local import LocalDocumentBlobStore
 from ai_idp.adapters.outbound.telemetry.otel import OpenTelemetryJsonlAdapter
 from ai_idp.application.ports.protocols import (
     DecisionEngine,
@@ -73,7 +73,7 @@ def build_container(
         init_db_schema(engine)
     session_factory = build_session_factory(engine)
 
-    resolved_blob_store = blob_store or LocalDocumentBlobStore(cfg.local_storage_root)
+    resolved_blob_store = blob_store or PdfArtifactStore(cfg)
     resolved_document_reader = document_reader or IsolatedDocumentReader(cfg)
     resolved_telemetry = telemetry or OpenTelemetryJsonlAdapter(
         cfg.local_telemetry_root,

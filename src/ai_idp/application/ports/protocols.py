@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -33,10 +34,39 @@ class UnitInputPayload:
     image_media_type: str = "image/png"
     prev_excerpt: str | None = None
     next_excerpt: str | None = None
+    prev_unit_id: str | None = None
+    next_unit_id: str | None = None
     additional_images: list[tuple[bytes, str]] = field(default_factory=list)
     document_context: str = ""
     extraction_instructions: str = ""
     verification_scope: str = "complete_document"
+    lazy_image_refs: list[tuple[str, str, int]] = field(default_factory=list)
+    image_loader: Callable[[str], bytes] | None = None
+    image_sizer: Callable[[str], int] | None = None
+
+    @property
+    def image_count(self) -> int:
+        return int(bool(self.image_bytes)) + len(self.additional_images) + len(self.lazy_image_refs)
+
+    @property
+    def image_size(self) -> int:
+        return (
+            len(self.image_bytes or b"")
+            + sum(len(b) for b, _ in self.additional_images)
+            + sum(
+                size if size else self.image_sizer(ref) if self.image_sizer else 0
+                for ref, _, size in self.lazy_image_refs
+            )
+        )
+
+    def images(self) -> Iterator[tuple[bytes, str]]:
+        if self.image_bytes:
+            yield self.image_bytes, self.image_media_type
+        yield from self.additional_images
+        for ref, media_type, _ in self.lazy_image_refs:
+            if self.image_loader is None:
+                raise RuntimeError("A lazy image requires an artifact loader.")
+            yield self.image_loader(ref), media_type
 
 
 @dataclass(slots=True)

@@ -46,7 +46,7 @@ async def extract_partitioned(pipeline: Any, key: str, **kwargs: Any) -> Extract
                 kind = next((t for t in types if t != "null"), "null")
                 child = TargetFieldSpec(
                     path=path,
-                    name=path,
+                    name="part_" + digest(path),
                     field_type=kind,
                     is_array=kind == "array",
                     raw_schema=node,
@@ -155,21 +155,19 @@ async def extract_partitioned(pipeline: Any, key: str, **kwargs: Any) -> Extract
                         )
                     if positions:
                         source_offset = positions[-1] + len(result.record_anchors[-1]["quote"])
-                        cells = source[0].unit.metadata.get("cell_spans", [])
-                        owned_cell = next(
-                            (c for c in cells if c["start"] <= positions[-1] < c["end"]), None
-                        )
-                        if owned_cell:
-                            row = re.search(r"\d+$", owned_cell["cell"]).group()
-                            source_offset = max(
-                                c["end"] + 1
-                                for c in cells
-                                if re.search(r"\d+$", c["cell"]).group() == row
+                        end_quote = result.record_anchors[-1].get("end_quote")
+                        if end_quote:
+                            endings = list(
+                                re.finditer(re.escape(end_quote), canonical_text[positions[-1] :])
                             )
-                        else:
-                            end_line = canonical_text.find("\n", source_offset)
-                            if end_line >= 0:
-                                source_offset = end_line + 1
+                            if len(endings) != 1:
+                                raise ModelOutputLimitExceededError(
+                                    "Record end anchor is ambiguous or outside owned text."
+                                )
+                            source_offset = max(source_offset, positions[-1] + endings[0].end())
+                        # Only the record anchor is consumed. A physical row or
+                        # text line may contain another independent record. The
+                        # remaining tail is context until the next record starts.
                 if result.has_more and (
                     not values
                     or not result.cursor
@@ -240,19 +238,10 @@ async def extract_partitioned(pipeline: Any, key: str, **kwargs: Any) -> Extract
                 if positions:
                     for index, item in enumerate(values):
                         start = positions[index]
+                        # Never search beyond the last anchor for mechanical
+                        # fallback: that could borrow evidence from an unseen
+                        # record. Explicit leaf citations retain their full spans.
                         end = positions[index + 1] if index + 1 < len(positions) else source_offset
-                        cells = source[0].unit.metadata.get("cell_spans", [])
-                        cell = next((c for c in cells if c["start"] <= start < c["end"]), None)
-                        if cell:
-                            row = re.search(r"\d+$", cell["cell"]).group()
-                            end = min(
-                                end,
-                                max(
-                                    c["end"]
-                                    for c in cells
-                                    if re.search(r"\d+$", c["cell"]).group() == row
-                                ),
-                            )
                         for pointer, scalar in scalar_leaves(item, f"{target.path}/{base + index}"):
                             if not evidence.get(pointer):
                                 anchored = anchor_value(

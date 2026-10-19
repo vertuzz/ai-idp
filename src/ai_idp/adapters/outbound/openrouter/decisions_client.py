@@ -67,8 +67,7 @@ def _build_unit_state(
         header_lines.append("Extracted Native Text: <none available>")
 
     state: list[Any] = ["\n".join(header_lines)]
-    images = [(payload.image_bytes, payload.image_media_type)] if payload.image_bytes else []
-    for image_bytes, media_type in [*images, *payload.additional_images]:
+    for image_bytes, media_type in payload.images():
         state.append(
             {
                 "type": "image_url",
@@ -292,7 +291,7 @@ class OpenRouterDecisionEngine:
         questions: dict[str, Any] = {}
         for index, payload in enumerate(unit_payloads):
             # Each batch is self-contained: no full-document or repeated neighbor text.
-            state.extend(_build_unit_state(payload, include_context=False))
+            state.extend(await asyncio.to_thread(_build_unit_state, payload, include_context=False))
             uid = payload.unit.unit_id
             questions[f"unit_{index}"] = {
                 "type": "noul",
@@ -346,7 +345,8 @@ class OpenRouterDecisionEngine:
             f"{f.name} ({f.description or f.field_type}; schema={json.dumps(f.raw_schema)})"
             for f in fields
         )
-        state = _build_unit_state(
+        state = await asyncio.to_thread(
+            _build_unit_state,
             unit_payload,
             extra_context=f"Target extraction fields: {field_summary}",
         )
@@ -446,7 +446,7 @@ class OpenRouterDecisionEngine:
         state: list[Any] = []
         for uid in referenced_ids:
             p = unit_payloads_by_id[uid]
-            state.extend(_build_unit_state(p, include_context=False))
+            state.extend(await asyncio.to_thread(_build_unit_state, p, include_context=False))
 
         options = [
             VerificationStatus.SUPPORTED.value,

@@ -253,7 +253,7 @@ def create_app(
         ref = refs[image_index]
         media_type = "image/jpeg" if ref.endswith((".jpg", ".jpeg")) else "image/png"
         return Response(
-            c.blob_store.get_bytes(ref),
+            await asyncio.to_thread(c.blob_store.get_bytes, ref),
             media_type=media_type,
             headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
         )
@@ -285,6 +285,21 @@ def create_app(
                 self=f"/v1/extractions/{job.job_id}",
                 result=f"/v1/extractions/{job.job_id}/result",
             ),
+        )
+
+    @v1.post("/documents/{document_id}/estimate")
+    async def estimate_extraction(
+        request: Request, document_id: str, payload: CreateExtractionRequest
+    ):
+        from ai_idp.application.services.work_estimate import estimate_work
+        from ai_idp.application.use_cases.request_extraction import build_pipeline_config
+        from ai_idp.domain.schema_normalizer import normalize_extraction_schema
+
+        c = request.app.state.container
+        _, units = c.inspect_job_use_case.get_document(document_id)
+        spec = normalize_extraction_schema(payload.schema_def, instructions=payload.instructions)
+        return estimate_work(
+            units, spec.fields, build_pipeline_config(c.settings, payload.model_profile)
         )
 
     @v1.get("/extractions/{job_id}", response_model=JobStatusResponse)

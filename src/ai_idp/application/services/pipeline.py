@@ -350,7 +350,7 @@ class ExtractionPipelineService:
                     kind = next((t for t in types if t != "null"), "null")
                     child = TargetFieldSpec(
                         path=path,
-                        name=path,
+                        name="part_" + hashlib.sha256(path.encode()).hexdigest()[:24],
                         field_type=kind,
                         raw_schema=node,
                         is_array=kind == "array",
@@ -359,7 +359,7 @@ class ExtractionPipelineService:
                     result = await self._extract_bounded(
                         key=f"{key}:child:{len(data)}", **{**kwargs, "target_fields": [child]}
                     )
-                    data[name] = result.data.get(path)
+                    data[name] = result.data.get(child.name)
                     evidence.update(result.evidence_by_field)
                 evidence[target.path] = [s for sources in evidence.values() for s in sources]
                 return ExtractionBatchResult(
@@ -372,7 +372,8 @@ class ExtractionPipelineService:
     async def _extract_legacy(self, *, key: str, **kwargs: Any) -> ExtractionBatchResult:
         job = self._job_repo.get_job(kwargs["job_id"])
         config = job.configuration
-        batches = unit_batches(
+        batches = await asyncio.to_thread(
+            unit_batches,
             kwargs["unit_inputs"],
             max_units=config.max_units_per_call,
             max_bytes=config.max_model_input_bytes,
@@ -469,18 +470,11 @@ class ExtractionPipelineService:
         # supported only when every portion is supported; no portion can override
         # a contradiction in another. This checks members, not omission-free coverage.
         small, outcomes, decisions = [], {}, []
-        for target, value, citations in kwargs["fields_to_verify"]:
-            if isinstance(value, list) and len(value) > 25:
-                fragments = [value[i : i + 25] for i in range(0, len(value), 25)]
-            elif isinstance(value, dict) and len(json.dumps(value)) > 8000:
-                fragments = [{k: v} for k, v in value.items()]
-                if len(fragments) == 1:
-                    from ai_idp.domain.errors import ModelInputLimitExceededError
+        from ai_idp.application.services.verification_parts import value_parts
 
-                    raise ModelInputLimitExceededError(
-                        "An indivisible verification value exceeds its limit."
-                    )
-            else:
+        for target, value, citations in kwargs["fields_to_verify"]:
+            fragments = value_parts(value)
+            if len(fragments) == 1 and fragments[0] == value:
                 small.append((target, value, citations))
                 continue
             results = []
@@ -493,9 +487,26 @@ class ExtractionPipelineService:
                 )
                 # Original source remains available; citations are partitioned as
                 # references, never substituted for source or silently truncated.
-                result = await self._verify_bounded(
+                result = await self._verify_source_batches(
                     key=f"{key}:portion:{hashlib.sha256(target.path.encode()).hexdigest()[:12]}:{index}",
-                    **{**kwargs, "fields_to_verify": [(scoped_target, fragment, [])]},
+                    **{
+                        **kwargs,
+                        "fields_to_verify": [
+                            (
+                                scoped_target,
+                                fragment,
+                                [
+                                    citation
+                                    for citation in citations
+                                    if any(
+                                        quote and quote in json.dumps(fragment, ensure_ascii=False)
+                                        for quote in (citation.raw_value, citation.quote)
+                                    )
+                                ]
+                                or citations,
+                            )
+                        ],
+                    },
                 )
                 results.append(result.outcomes[target.path])
                 decisions.extend(result.decision_records)
@@ -529,7 +540,7 @@ class ExtractionPipelineService:
         payloads = kwargs["unit_payloads_by_id"]
         inputs = []
         for payload in payloads.values():
-            has_images = bool(payload.image_bytes or payload.additional_images)
+            has_images = bool(payload.image_count)
             mode = (
                 Modality.TEXT_AND_VISION
                 if payload.native_text and has_images
@@ -538,7 +549,8 @@ class ExtractionPipelineService:
                 else Modality.TEXT
             )
             inputs.append((payload, mode))
-        batches = unit_batches(
+        batches = await asyncio.to_thread(
+            unit_batches,
             inputs,
             max_units=config.max_units_per_call,
             max_bytes=config.max_model_input_bytes,
@@ -971,6 +983,40 @@ class ExtractionPipelineService:
                     )
             if should_verify:
                 await self._verify_collection_coverage(job, concrete, field_values, payload_by_id)
+                # A fixed-schema object wrapper adds no independent collection count.
+                # Promote a portion-checked wrapper only after every descendant passes.
+                for target in sorted(concrete, key=lambda f: -len(f.path)):
+                    fv = field_values[target.path]
+                    if target.field_type != "object" or fv.verification != (
+                        VerificationStatus.INSUFFICIENT_EVIDENCE
+                    ):
+                        continue
+                    if (
+                        fv.unresolved_reason
+                        != "Members checked in portions; completeness needs review."
+                    ):
+                        continue
+                    if (
+                        fv.raw_probabilities.get("SUPPORTED", 0)
+                        < config.verification_supported_threshold
+                    ):
+                        continue
+                    children = [
+                        child
+                        for path, child in field_values.items()
+                        if path.startswith(target.path + "/")
+                    ]
+                    if (
+                        children
+                        and all(
+                            child.verification == VerificationStatus.SUPPORTED
+                            and not any(c.outcome == CheckOutcome.FAIL for c in child.check_results)
+                            for child in children
+                        )
+                        and not any(c.outcome == CheckOutcome.FAIL for c in fv.check_results)
+                    ):
+                        fv.verification = VerificationStatus.SUPPORTED
+                        fv.unresolved_reason = None
             spec = spec.model_copy(update={"fields": concrete})
             progress.fields_total = len(concrete)
 
@@ -1062,7 +1108,11 @@ class ExtractionPipelineService:
         refs = {
             ref
             for unit in units
-            for ref in [unit.native_text_ref, unit.image_ref, *unit.image_refs]
+            for ref in (
+                [unit.native_text_ref]
+                if unit.kind == UnitKind.PDF_PAGE
+                else [unit.native_text_ref, unit.image_ref, *unit.image_refs]
+            )
             if ref
         }
         if sum(self._blob_store.get_size(ref) for ref in refs) > max_prepared_bytes:
@@ -1081,7 +1131,8 @@ class ExtractionPipelineService:
             img_bytes: bytes | None = None
             img_media = "image/png"
             image_refs = list(dict.fromkeys(([u.image_ref] if u.image_ref else []) + u.image_refs))
-            if image_refs:
+            lazy_pdf = u.kind == UnitKind.PDF_PAGE
+            if image_refs and not lazy_pdf:
                 img_bytes = self._blob_store.get_bytes(image_refs[0])
                 img_media = _guess_image_media_type(image_refs[0])
             prev_excerpt = texts[idx - 1] if idx > 0 else None
@@ -1094,9 +1145,17 @@ class ExtractionPipelineService:
                     image_media_type=img_media,
                     prev_excerpt=prev_excerpt,
                     next_excerpt=next_excerpt,
+                    prev_unit_id=units[idx - 1].unit_id if idx > 0 else None,
+                    next_unit_id=units[idx + 1].unit_id if idx + 1 < len(units) else None,
+                    lazy_image_refs=[(ref, _guess_image_media_type(ref), 0) for ref in image_refs]
+                    if lazy_pdf
+                    else [],
+                    image_loader=self._blob_store.get_bytes if lazy_pdf else None,
+                    image_sizer=self._blob_store.get_size if lazy_pdf else None,
                     additional_images=[
                         (self._blob_store.get_bytes(ref), _guess_image_media_type(ref))
                         for ref in image_refs[1:]
+                        if not lazy_pdf
                     ],
                     document_context="",
                     extraction_instructions=instructions,
@@ -1125,7 +1184,8 @@ class ExtractionPipelineService:
             if config.batch_relevance_questions
             else 1
         )
-        batches = unit_batches(
+        batches = await asyncio.to_thread(
+            unit_batches,
             [(payload, Modality.TEXT_AND_VISION) for payload in unit_payloads],
             max_units=page_limit,
             max_bytes=config.max_model_input_bytes,
@@ -1724,6 +1784,9 @@ class ExtractionPipelineService:
                 ]
                 if len(matched_cells) == 1:
                     locator["cell"] = matched_cells[0]
+                    calculation = unit.metadata.get("cell_calculations", {}).get(matched_cells[0])
+                    if calculation:
+                        locator["calculation"] = calculation
             normalized.append(
                 Evidence(
                     unit_id=uid,

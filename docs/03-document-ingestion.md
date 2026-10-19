@@ -33,12 +33,12 @@ The example shows references, not inline raw document content. Optional fields a
 ## PDF adapter — PyMuPDF
 
 - Read page count, page dimensions, text and text blocks when directly available.
-- Render a preview image for each page at configurable resolution; preserve original page ID/number.
+- Prepare an on-demand image descriptor per page at configurable resolution; preserve original page ID/number. Default local storage renders requested images in monitored subprocesses with a bounded per-document cache.
 - Store text and image as separate derived artifacts, enabling decision engines to see either or both.
 - Store a versioned word-geometry artifact mapped conservatively to the unchanged canonical text. Positions are transformed to normalized display-image coordinates after crop/rotation; missing or ambiguous anchoring falls back to the cited page. Preview geometry does not change relevance, modality or verification.
 - Do not interpret missing/short native text as a deterministic decision to run an OCR or vision path.
 - Expose PDF text as imperfect evidence: extraction may lose reading order, table associations, and text hidden in images.
-- Support configurable lazy rendering/caching if full upfront rendering becomes expensive.
+- Keep PDF image references in model payloads; load images per bounded request. Text-only processing does not render them.
 
 ## DOCX adapter — Mammoth (no LibreOffice)
 

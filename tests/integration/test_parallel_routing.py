@@ -139,7 +139,9 @@ async def test_concurrent_attempts_share_one_job_budget_and_cancel_siblings(tmp_
         relevance_batch_units=1,
         max_parallel_decision_batches=2,
     )
-    job = multipage_job(c, fields=1)
+    # Routing itself fits admission; subsequent stages must still share the
+    # exhausted physical-attempt budget without starting extra requests.
+    job = multipage_job(c, fields=1, pages=3)
     with pytest.raises(BudgetExhaustedError):
         await c.pipeline_service.execute_job(job.job_id)
     assert decision.attempts == 3

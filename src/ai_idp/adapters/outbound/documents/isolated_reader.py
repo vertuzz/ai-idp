@@ -59,6 +59,8 @@ class IsolatedDocumentReader:
                     "spreadsheet_rows_per_unit",
                     "max_unit_text_characters",
                     "max_document_text_characters",
+                    "max_formula_cells",
+                    "max_formula_steps",
                 )
             }
             (root / "request.json").write_text(
@@ -66,6 +68,7 @@ class IsolatedDocumentReader:
                     {
                         "document": document.model_dump(mode="json"),
                         "settings": options,
+                        "lazy_pdf": bool(getattr(blob_store, "supports_lazy_pdf", False)),
                     }
                 ),
                 encoding="utf-8",
@@ -131,6 +134,7 @@ def _main() -> None:
 
     class BoundedArtifactStore(LocalDocumentBlobStore):
         written = 0
+        supports_lazy_pdf = request.get("lazy_pdf", False)
 
         def put_bytes(self, key: str, content: bytes) -> str:
             self.written += len(content)

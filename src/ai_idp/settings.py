@@ -11,6 +11,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables and .env."""
 
+    max_formula_cells: int = Field(default=100_000, ge=1, validation_alias="MAX_FORMULA_CELLS")
+    max_formula_steps: int = Field(default=100_000, ge=1, validation_alias="MAX_FORMULA_STEPS")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

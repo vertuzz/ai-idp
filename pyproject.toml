@@ -71,6 +71,7 @@ pythonpath = ["."]
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
+native_parser = false
 python_version = "3.13"
 files = ["src/ai_idp/domain", "src/ai_idp/application/ports"]
 follow_imports = "silent"

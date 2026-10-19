@@ -45,6 +45,9 @@ def preview(request: Request, response: Response, document_id: str, unit_id: str
         "artifact_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "image_count": len(set(([unit.image_ref] if unit.image_ref else []) + unit.image_refs)),
         "warnings": unit.metadata.get("conversion_warnings", []),
+        "cells": json.loads(container.blob_store.get_text(unit.metadata["cells_ref"]))
+        if unit.metadata.get("cells_ref")
+        else [],
     }
 
 
@@ -114,7 +117,8 @@ def locate(
         "method": "native_text",
         "coordinate_space": "normalized_display_image_top_left",
         "image_index": 0,
-        "image_sha256": geometry["image_sha256"],
+        "image_sha256": geometry["image_sha256"]
+        or hashlib.sha256(container.blob_store.get_bytes(unit.image_ref)).hexdigest(),
         "start": start,
         "end": end,
         "regions": regions,

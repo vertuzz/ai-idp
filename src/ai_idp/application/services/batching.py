@@ -12,8 +12,7 @@ def input_size(payload: UnitInputPayload, modality: Modality) -> int:
     if modality in (Modality.TEXT, Modality.TEXT_AND_VISION):
         size += len((payload.native_text or "").encode("utf-8"))
     if modality in (Modality.VISION, Modality.TEXT_AND_VISION):
-        size += sum(len(content) * 4 // 3 + 128 for content, _ in payload.additional_images)
-        size += len(payload.image_bytes or b"") * 4 // 3
+        size += payload.image_size * 4 // 3 + 128 * payload.image_count
     return size
 
 
@@ -32,9 +31,7 @@ def unit_batches(
         item_bytes = input_size(*item)
         payload, modality = item
         item_images = (
-            int(bool(payload.image_bytes)) + len(payload.additional_images)
-            if modality in (Modality.VISION, Modality.TEXT_AND_VISION)
-            else 0
+            payload.image_count if modality in (Modality.VISION, Modality.TEXT_AND_VISION) else 0
         )
         if max_images is not None and item_images > max_images:
             raise ModelInputLimitExceededError("A source unit exceeds the model image limit.")

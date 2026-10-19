@@ -4,6 +4,10 @@ Implemented on 2026-10-18. This documents the delivered behavior; the earlier
 [research plan](18-spreadsheets-and-bounded-results-plan.md) also contains proposals
 that are not all implemented defaults.
 
+The [2026-10-19 extension](20-bounded-formulas-and-large-documents.md) adds bounded
+formula calculation, shared-formula recovery, nested verification, coordinate grids,
+explicit table coverage, on-demand PDF pages and work estimates.
+
 ## Reading workbooks
 
 Uploads accept XLSX, XLSM, XLS and XLSB alongside PDF, DOCX and images. OOXML workbooks
@@ -12,14 +16,15 @@ limits; XLS/XLSB use python-calamine. Decoding stays in the existing killable pr
 with memory, elapsed-time and generated-artifact budgets. Encrypted workbooks fail
 with `encrypted_document`; decrypt them outside the service before uploading.
 
-Macros, formula functions, workbook connections and external resources are never
-executed or fetched. Formula text, cached values, number formats, date epoch, hidden
+Macros, workbook connections and external resources are never executed or fetched.
+OOXML formula arithmetic uses a bounded deterministic interpreter in the isolated
+decoder. Formula text, cached values, number formats, date epoch, hidden
 sheet state and cell coordinates remain available. A cached empty string is distinct
 from a missing cache. Cached values are not a freshness guarantee. Binary workbook
 formula text/styles/drawings and chart rendering have explicit capability warnings;
 they cannot silently establish absence. Embedded OOXML images are retained as workbook
-context without fabricated drawing anchors. Office-faithful rendering, formula
-recalculation, ODS, CSV and Excel template extensions are not part of this release.
+context without fabricated drawing anchors. Office-faithful rendering, full Excel
+formula compatibility, ODS, CSV and Excel template extensions remain deferred.
 
 Style-only blanks and unused rectangular dimensions are ignored. Zero, false and
 zero-padded identifiers remain data. Each bounded source range retains literal cell
@@ -58,7 +63,7 @@ planning, hard generation limits and adaptive halving bound responses. A single
 indivisible record/value that still exceeds a limit fails explicitly; it is never
 shortened and presented as complete. Deeply nested collections inside a single
 oversized record remain subject to that record limit. Schema complexity limits are
-unchanged. Main-worker prepared input remains bounded by `MAX_PREPARED_INPUT_MIB`;
+unchanged. Prepared text and eager non-PDF input remain bounded by `MAX_PREPARED_INPUT_MIB`;
 this is not an unbounded million-row streaming analytics engine.
 
 ## Extraction, recovery and verification

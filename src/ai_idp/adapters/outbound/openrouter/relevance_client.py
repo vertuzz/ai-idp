@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 
@@ -70,12 +71,8 @@ class GenerativeRelevanceEngine:
                 f"metadata={json.dumps(payload.unit.metadata)}\n"
                 f"Native text:\n{payload.native_text or '<none available>'}"
             )
-            images = (
-                [(payload.image_bytes, payload.image_media_type)] if payload.image_bytes else []
-            )
-            for index, (content, media_type) in enumerate(
-                [*images, *payload.additional_images], start=1
-            ):
+            images = await asyncio.to_thread(lambda payload=payload: list(payload.images()))
+            for index, (content, media_type) in enumerate(images, start=1):
                 parts.append(f"Image {index} of candidate unit {payload.unit.unit_id}:")
                 parts.append(BinaryContent(data=content, media_type=media_type))
         output, usage = await self._client.run_structured(

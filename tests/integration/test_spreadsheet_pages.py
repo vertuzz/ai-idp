@@ -98,7 +98,7 @@ def setup(tmp_path, extractor, **options):
             database_url=f"sqlite:///{(tmp_path / 'core.db').as_posix()}",
             local_storage_root=tmp_path / "files",
             local_telemetry_root=tmp_path / "telemetry",
-            extraction_page_items=7,
+            extraction_page_items=options.pop("extraction_page_items", 7),
             max_field_extra_attempts=0,
             **options,
         ),

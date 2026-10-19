@@ -26,6 +26,7 @@ class CompositeDocumentReader:
                     max_pages=settings.max_pdf_pages,
                     render_dpi=settings.pdf_render_dpi,
                     max_image_pixels=settings.max_image_pixels,
+                    lazy_render=True,
                 ),
                 MammothDocxDocumentReader(
                     max_blocks=settings.max_docx_blocks,
