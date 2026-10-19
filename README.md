@@ -11,23 +11,38 @@ The project begins as a self-hosted HTTP API and may later evolve into a product
 ## Local start
 
 Development currently takes place on Windows; the project targets Windows, Linux and macOS.
-Install uv, configure `.env` from `.env.example`, start PostgreSQL, apply migrations, and run tests or the API/worker from the repository root:
+Install uv and Docker with Compose v2.20+, start the Docker engine, then run from
+the repository root:
 
 ~~~text
 uv sync --locked --group dev --group evaluation
-uv run --locked pre-commit install
-docker compose up -d postgres
-uv run python -m alembic upgrade head
-uv run --group dev --group evaluation python -m pytest -q
-uv run python -m ruff check .
-uv run --locked python -m mypy
+uv run --locked python scripts/dev.py up
 ~~~
 
-Start the HTTP API and background worker locally:
+Open `http://127.0.0.1:8000/docs`. This starts one API, one worker and an isolated
+PostgreSQL database, with migrations and readiness checks. `.env` is created from
+the example only if missing. Startup makes no model requests; persisted queued
+work may resume. Manage the same stack with:
 
 ~~~text
-uv run python -m uvicorn ai_idp.adapters.inbound.http.app:create_app --factory --host 127.0.0.1 --port 8000
-uv run python -m ai_idp.workers.runner
+uv run --locked python scripts/dev.py status
+uv run --locked python scripts/dev.py logs
+uv run --locked python scripts/dev.py restart
+uv run --locked python scripts/dev.py down
+~~~
+
+`down` preserves database/uploads. See [local development](docs/22-local-development.md)
+for source edits, native debugging, data isolation, cleanup and CI. For the complete
+commercial product, run the helper in the Cloud sibling repository instead; its
+single HTTP app includes the core API and frontend. The public core runs independently.
+
+Offline checks and optional local commit hooks:
+
+~~~text
+uv run --locked pre-commit install
+uv run --locked --group dev --group evaluation python -m pytest -q
+uv run --locked python -m ruff check .
+uv run --locked python -m mypy
 ~~~
 
 Prepare/validate the 120-file evaluation corpus and run opt-in live model checks (requires `OPENROUTER_API_KEY` in `.env`):
@@ -128,6 +143,7 @@ Deterministic **mechanical** operations are still required: parsing files, rende
 | [Implementation plan](docs/10-implementation-plan.md) | Ordered milestones and definition of done |
 | [Decisions](docs/11-decisions-and-open-questions.md) | Architectural decisions and unresolved questions |
 | [Operations and release gates](docs/13-operations-and-release.md) | Deployment, limits, schemas, backup/restore, human review and acceptance |
+| [Local development and stack ownership](docs/22-local-development.md) | One-command core startup, full-product boundary, cleanup, native debugging and CI |
 | [Page-batch validation](docs/16-page-batch-validation.md) | v4 routing contract, offline checks and the 72-file development run |
 | [Excel and bounded-result research plan](docs/18-spreadsheets-and-bounded-results-plan.md) | Parser experiments, Excel scope, generation limits, resumable parts and result pagination |
 | [Excel and paged results](docs/19-spreadsheets-and-paged-results.md) | Formats, parser safety, partition extraction, paging contract and UI |

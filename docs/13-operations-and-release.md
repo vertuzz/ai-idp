@@ -13,8 +13,10 @@ password, then run `docker compose up -d --build`. Compose waits for PostgreSQL 
 the one-shot migration service before starting API and workers. Published ports bind
 to loopback. The interactive API reference is available at `http://127.0.0.1:8000/docs`.
 
-For native development, start PostgreSQL, run `uv run --locked python -m alembic upgrade head`,
-then start the API and worker using the README commands. `/health/live` checks the process;
+For normal local development use `uv run --locked python scripts/dev.py up` and stop
+with `down`. This is a separate source-mounted stack with isolated named volumes.
+See [local development](22-local-development.md) for its ownership and native debugging
+alternative. `/health/live` checks the process;
 `/health/ready` checks storage and required database tables/columns. A missing migration
 must not be reported as ready. No provider call is made by health checks.
 

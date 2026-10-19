@@ -1,0 +1,66 @@
+# Standalone core only. No dependency on any commercial repository.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ai_idp
+      POSTGRES_PASSWORD: ai_idp # pragma: allowlist secret -- public dev credential
+      POSTGRES_DB: ai_idp
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_idp -d ai_idp"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  migrate:
+    build: .
+    env_file: [.env]
+    environment: &runtime
+      # pragma: allowlist nextline secret (public isolated development credential)
+      DATABASE_URL: postgresql+psycopg://ai_idp:ai_idp@postgres:5432/ai_idp # pragma: allowlist secret
+      LOCAL_STORAGE_ROOT: /runtime/storage
+      LOCAL_TELEMETRY_ROOT: /runtime/telemetry
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["uv", "run", "--locked", "python", "-m", "alembic", "upgrade", "head"]
+
+  api:
+    build: .
+    env_file: [.env]
+    environment: *runtime
+    ports: ["127.0.0.1:8000:8000"]
+    volumes:
+      - ./src:/app/src:ro
+      - runtime:/runtime
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["uv", "run", "--locked", "python", "-m", "uvicorn", "ai_idp.adapters.inbound.http.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build: .
+    env_file: [.env]
+    environment: *runtime
+    volumes:
+      - ./src:/app/src:ro
+      - runtime:/runtime
+    healthcheck:
+      test: ["CMD", "uv", "run", "--locked", "python", "-m", "ai_idp.workers.healthcheck"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
+    stop_grace_period: 35s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["uv", "run", "--locked", "python", "-m", "ai_idp.workers.runner"]
+
+volumes:
+  postgres:
+  runtime:
