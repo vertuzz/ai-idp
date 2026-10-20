@@ -130,6 +130,18 @@ Transient provider/network failures are retried with bounded backoff. SIGINT/SIG
 requests a bounded graceful worker shutdown; unfinished jobs recover after their leases
 expire. Never delete a queue row to retry work manually.
 
+## Object storage
+
+`STORAGE_BACKEND=local` (default) keeps originals and artifacts under
+`LOCAL_STORAGE_ROOT`; every API and worker process must share that directory.
+`STORAGE_BACKEND=s3` (install `ai-idp[s3]`) writes every original and decoded artifact
+to an S3-compatible bucket (`S3_BUCKET`, optional `S3_PREFIX`, `S3_ENDPOINT_URL` for
+R2, Hetzner Object Storage or MinIO, `S3_REGION`; credentials from the standard
+`AWS_*` variables). `LOCAL_STORAGE_ROOT` then becomes a per-node read-through cache:
+a node that did not ingest a document downloads it on first use, and PDF page images
+are rendered into that cache on demand and never uploaded. The cache can be deleted
+while processes are stopped. Readiness checks the bucket as well as the cache.
+
 ## Telemetry and storage maintenance
 
 Telemetry uses separate `spans-{process_id}.jsonl` files so processes do not rotate each

@@ -12,7 +12,7 @@
 
 **ADR-005 — PostgreSQL-only queue.** Use an existing PostgreSQL server for persistence, durable job state, and leased worker polling. No Redis or Celery for MVP.
 
-**ADR-006 — Local-first storage and telemetry.** Local original/derived files behind ports; OpenTelemetry SDK exporting JSONL locally. Future S3 and external observability systems should be adapter changes.
+**ADR-006 — Local-first storage and telemetry.** Local original/derived files behind ports; OpenTelemetry SDK exporting JSONL locally. Future S3 and external observability systems should be adapter changes. S3-compatible storage is now an optional adapter (`STORAGE_BACKEND=s3`) that keeps a local read-through cache.
 
 **ADR-007 — Field-level evidence and verification.** Each field may have multiple evidence references. Use independent supported/contradicted/insufficient-evidence decisions, preserve raw probabilities and bounded escalation. Never claim raw model probability equals calibrated truth likelihood.
 

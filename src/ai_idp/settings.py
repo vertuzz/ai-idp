@@ -72,6 +72,14 @@ class Settings(BaseSettings):
         default=Path("./data"),
         validation_alias="LOCAL_STORAGE_ROOT",
     )
+    storage_backend: Literal["local", "s3"] = Field(
+        default="local", validation_alias="STORAGE_BACKEND"
+    )
+    # S3-compatible storage; credentials come from the standard AWS_* environment.
+    s3_bucket: str = Field(default="", validation_alias="S3_BUCKET")
+    s3_prefix: str = Field(default="", validation_alias="S3_PREFIX")
+    s3_endpoint_url: str = Field(default="", validation_alias="S3_ENDPOINT_URL")
+    s3_region: str = Field(default="", validation_alias="S3_REGION")
     local_telemetry_root: Path = Field(
         default=Path("./telemetry"),
         validation_alias="LOCAL_TELEMETRY_ROOT",

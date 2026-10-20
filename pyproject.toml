@@ -33,6 +33,11 @@ dependencies = [
     "uvicorn[standard]>=0.34",
 ]
 
+[project.optional-dependencies]
+s3 = [
+    "boto3>=1.40",
+]
+
 [dependency-groups]
 evaluation = [
     "fonttools>=4.67.0",
@@ -46,6 +51,7 @@ evaluation = [
 ]
 dev = [
     "detect-secrets>=1.5.0",
+    "moto[s3]>=5.1",
     "mypy>=2.4.0",
     "pre-commit>=4.7.0",
     "pytest>=8",

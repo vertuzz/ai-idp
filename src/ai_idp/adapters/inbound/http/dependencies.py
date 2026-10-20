@@ -20,6 +20,7 @@ from ai_idp.adapters.outbound.persistence.repositories import (
     SqlAlchemyResultRepository,
 )
 from ai_idp.adapters.outbound.persistence.suggestions import SqlAlchemySuggestionRepository
+from ai_idp.adapters.outbound.storage.s3 import S3DocumentBlobStore
 from ai_idp.adapters.outbound.telemetry.otel import OpenTelemetryJsonlAdapter
 from ai_idp.application.ports.protocols import (
     DecisionEngine,
@@ -59,6 +60,20 @@ class AppContainer:
     suggestion_service: SchemaSuggestionService
 
 
+def build_blob_store(cfg: Settings) -> DocumentBlobStore:
+    """Local storage by default; with `STORAGE_BACKEND=s3` local files are only a cache."""
+    local = PdfArtifactStore(cfg)
+    if cfg.storage_backend != "s3":
+        return local
+    return S3DocumentBlobStore(
+        local,
+        cfg.s3_bucket,
+        prefix=cfg.s3_prefix,
+        endpoint_url=cfg.s3_endpoint_url or None,
+        region=cfg.s3_region or None,
+    )
+
+
 def build_container(
     settings: Settings | None = None,
     *,
@@ -80,7 +95,7 @@ def build_container(
         init_db_schema(engine)
     session_factory = build_session_factory(engine)
 
-    resolved_blob_store = blob_store or PdfArtifactStore(cfg)
+    resolved_blob_store = blob_store or build_blob_store(cfg)
     resolved_document_reader = document_reader or IsolatedDocumentReader(cfg)
     resolved_telemetry = telemetry or OpenTelemetryJsonlAdapter(
         cfg.local_telemetry_root,
