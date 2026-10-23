@@ -27,6 +27,40 @@ def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()[:24]
 
 
+class RecordAnchorError(ModelOutputLimitExceededError):
+    """Returned records cannot be placed in the owned source text."""
+
+
+def locate_records(
+    result: ExtractionBatchResult, count: int, text: str, offset: int
+) -> tuple[list[int], int]:
+    """Resolve record anchors to start positions and the consumed owned-text offset."""
+    if not (result.record_anchors and text):
+        return [], offset
+    if len(result.record_anchors) != count:
+        raise RecordAnchorError("Record anchors do not match the page.")
+    positions = []
+    for anchor in result.record_anchors:
+        matches = list(re.finditer(re.escape(anchor["quote"]), text[offset:]))
+        occurrence = anchor["occurrence"]
+        if occurrence < 0 or occurrence >= len(matches):
+            raise RecordAnchorError("Record anchor is outside owned text.")
+        positions.append(offset + matches[occurrence].start())
+    if positions != sorted(set(positions)):
+        raise RecordAnchorError("Record anchors repeat or change source order.")
+    consumed = positions[-1] + len(result.record_anchors[-1]["quote"])
+    end_quote = result.record_anchors[-1].get("end_quote")
+    if end_quote:
+        endings = list(re.finditer(re.escape(end_quote), text[positions[-1] :]))
+        if len(endings) != 1:
+            raise RecordAnchorError("Record end anchor is ambiguous or outside owned text.")
+        consumed = max(consumed, positions[-1] + endings[0].end())
+    # Only the record anchor is consumed. A physical row or text line may contain
+    # another independent record. The remaining tail is context until the next
+    # record starts.
+    return positions, consumed
+
+
 async def extract_partitioned(pipeline: Any, key: str, **kwargs: Any) -> ExtractionBatchResult:
     recovering = kwargs.pop("_recovering", False)
     job = pipeline._job_repo.get_job(kwargs["job_id"])
@@ -98,20 +132,17 @@ async def extract_partitioned(pipeline: Any, key: str, **kwargs: Any) -> Extract
                     replace(source[0], native_text=canonical_text[source_offset:]),
                     source[1],
                 )
+                extract_page = partial(
+                    pipeline._extraction_engine.extract_fields,
+                    **{**kwargs, "target_fields": [target], "unit_inputs": [owned_source]},
+                )
+                page_key = "extract-page:" + scope + f":{limit}"
                 try:
                     result = await pipeline._model_step(
                         job.job_id,
-                        "extract-page:" + scope + f":{limit}",
+                        page_key,
                         ExtractionBatchResult,
-                        partial(
-                            pipeline._extraction_engine.extract_fields,
-                            **{
-                                **kwargs,
-                                "spec": paged_spec,
-                                "target_fields": [target],
-                                "unit_inputs": [owned_source],
-                            },
-                        ),
+                        partial(extract_page, spec=paged_spec),
                     )
                 except ModelOutputLimitExceededError:
                     if limit <= 1:
@@ -125,49 +156,43 @@ async def extract_partitioned(pipeline: Any, key: str, **kwargs: Any) -> Extract
                         job.job_id, f"split:{scope}:{previous_limit}", {"limit": limit}, None
                     )
                     continue
-                values = result.data.get(target.name)
-                if values is None:
-                    values = []
-                else:
-                    found = True
-                if not isinstance(values, list) or len(values) > limit:
-                    raise ModelOutputLimitExceededError(
-                        "Collection output exceeds the requested page size."
-                    )
                 previous_offset = source_offset
-                positions = []
-                if result.record_anchors and canonical_text:
-                    if len(result.record_anchors) != len(values):
-                        raise ModelOutputLimitExceededError("Record anchors do not match the page.")
-                    for anchor in result.record_anchors:
-                        matches = list(
-                            re.finditer(re.escape(anchor["quote"]), canonical_text[source_offset:])
-                        )
-                        occurrence = anchor["occurrence"]
-                        if occurrence < 0 or occurrence >= len(matches):
-                            raise ModelOutputLimitExceededError(
-                                "Record anchor is outside owned text."
-                            )
-                        positions.append(source_offset + matches[occurrence].start())
-                    if positions != sorted(set(positions)):
+                for corrective in (False, True):
+                    values = result.data.get(target.name)
+                    values = [] if values is None else values
+                    if not isinstance(values, list) or len(values) > limit:
                         raise ModelOutputLimitExceededError(
-                            "Record anchors repeat or change source order."
+                            "Collection output exceeds the requested page size."
                         )
-                    if positions:
-                        source_offset = positions[-1] + len(result.record_anchors[-1]["quote"])
-                        end_quote = result.record_anchors[-1].get("end_quote")
-                        if end_quote:
-                            endings = list(
-                                re.finditer(re.escape(end_quote), canonical_text[positions[-1] :])
-                            )
-                            if len(endings) != 1:
-                                raise ModelOutputLimitExceededError(
-                                    "Record end anchor is ambiguous or outside owned text."
-                                )
-                            source_offset = max(source_offset, positions[-1] + endings[0].end())
-                        # Only the record anchor is consumed. A physical row or
-                        # text line may contain another independent record. The
-                        # remaining tail is context until the next record starts.
+                    try:
+                        positions, source_offset = locate_records(
+                            result, len(values), canonical_text, previous_offset
+                        )
+                        break
+                    except RecordAnchorError as error:
+                        if corrective:
+                            raise
+                        # Bounded recovery: models sometimes re-emit records shown
+                        # only as adjacent context. Re-read the same owned text once
+                        # and say why the first answer was rejected.
+                        result = await pipeline._model_step(
+                            job.job_id,
+                            page_key + ":anchors",
+                            ExtractionBatchResult,
+                            partial(
+                                extract_page,
+                                spec=paged_spec.model_copy(
+                                    update={
+                                        "instructions": paged_spec.instructions
+                                        + f"\nA previous answer for this page was rejected: "
+                                        f"{error} Emit only records whose first text is in "
+                                        "the owned unit text; records in previous or "
+                                        "following context belong to other units."
+                                    }
+                                ),
+                            ),
+                        )
+                found = found or result.data.get(target.name) is not None
                 if result.has_more and (
                     not values
                     or not result.cursor

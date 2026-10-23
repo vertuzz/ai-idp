@@ -81,6 +81,53 @@ async def test_continuation_preserves_two_records_on_the_same_worksheet_row(tmp_
     assert result.data["items"] == [{"id": "LEFT", "amount": 1}, {"id": "RIGHT", "amount": 2}]
 
 
+class ContextEchoExtractor(RegisterExtractor):
+    """Also returns a record that exists only in adjacent context, like a previous page."""
+
+    def __init__(self, *, stubborn=False):
+        super().__init__()
+        self.stubborn = stubborn
+
+    async def extract_fields(self, **kw):
+        result = await super().extract_fields(**kw)
+        if self.stubborn or "rejected" not in kw["spec"].instructions:
+            result.data["items"].insert(0, {"id": "LOT-999999", "amount": 1.0})
+            result.record_anchors.insert(0, {"quote": "A999: LOT-999999", "occurrence": 0})
+        return result
+
+
+async def test_records_from_adjacent_context_get_one_corrective_retry(tmp_path):
+    extractor = ContextEchoExtractor()
+    core, client = setup(tmp_path, extractor, extraction_page_items=25)
+    doc = client.post(
+        "/v1/documents", files={"file": ("register.xlsx", workbook_bytes(18, 1))}
+    ).json()["document_id"]
+    job_id = client.post("/v1/extractions", json={"document_id": doc, "schema": SCHEMA}).json()[
+        "job_id"
+    ]
+    result = await core.pipeline_service.execute_job(job_id)
+    assert [r["id"] for r in result.data["items"]] == [f"LOT-{i:06d}" for i in range(18)]
+    assert extractor.calls == 2
+
+
+async def test_repeated_context_records_still_fail_the_run(tmp_path):
+    import pytest
+
+    from ai_idp.application.services.partitioned_extraction import RecordAnchorError
+
+    extractor = ContextEchoExtractor(stubborn=True)
+    core, client = setup(tmp_path, extractor, extraction_page_items=25)
+    doc = client.post(
+        "/v1/documents", files={"file": ("register.xlsx", workbook_bytes(18, 1))}
+    ).json()["document_id"]
+    job_id = client.post("/v1/extractions", json={"document_id": doc, "schema": SCHEMA}).json()[
+        "job_id"
+    ]
+    with pytest.raises(RecordAnchorError, match="outside owned text"):
+        await core.pipeline_service.execute_job(job_id)
+    assert extractor.calls == 2
+
+
 def test_large_pdf_prepares_without_rendering_and_payloads_load_images_only_when_needed(tmp_path):
     core = build_container(
         Settings(
